@@ -1,1 +1,0 @@
-{% extends 'core/base.html' %}{% block content %}<div class="card" style="max-width:440px;margin:40px auto"><h2>Authorized sign-in</h2><p style="color:var(--muted)">Use your assigned account. Demo: supervisor / manager / staff1.</p><form method="post">{% csrf_token %}{{ form.as_p }}<button class="btn">Sign in</button></form></div>{% endblock %}
