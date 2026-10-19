@@ -1,0 +1,7 @@
+http://127.0.0.1:8000/admin/login/?next=/admin/
+
+Role	Username	Password	Access / Capabilities
+Department Supervisor	supervisor	Supervisor123!	Department-wide dashboard, final deliverable approvals, all unit shift views & tasks
+Unit Manager (PICU)	manager	Manager12345!	Unit roster, verify/return unit deliverables, log shift counts
+Nursing Staff	staff1	Staff123456!	View own profile & deliverables, submit documents, record LDNI training
+Django Administrator	admin	Admin12345678!	Django Admin Portal
