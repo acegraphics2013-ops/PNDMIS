@@ -1,26 +1,87 @@
-{% load static %}<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PNDMIS — {{ page_title|default:"Dashboard" }}</title><link rel="stylesheet" href="{% static 'css/style.css' %}"><link rel="stylesheet" href="{% static 'css/dashboard.css' %}"><link rel="stylesheet" href="{% static 'css/components.css' %}"><script src="https://unpkg.com/lucide@latest"></script><script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>{% block head %}{% endblock %}</head><body><a class="skip" href="#main-content">Skip to content</a><div class="app">
-<aside class="sidebar" id="sidebar" aria-label="Primary"><div class="brand"><span class="mark">P</span><span class="brand-name">PNDMIS</span><button class="iconbtn collapse-btn" onclick="toggleCollapse()" aria-label="Collapse sidebar" title="Collapse sidebar"><i data-lucide="chevrons-left"></i></button></div>
-<nav class="nav">
-<small>Main</small>
-<a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" title="Dashboard"><i data-lucide="layout-dashboard" aria-hidden="true"></i> <span>Dashboard</span></a>
-<a href="{% url 'records' %}" class="{% if request.resolver_match.url_name == 'records' %}active{% endif %}" title="Records Management"><i data-lucide="database" aria-hidden="true"></i> <span>Records</span></a>
-<a href="{% url 'categories' %}" class="{% if request.resolver_match.url_name == 'categories' %}active{% endif %}" title="Categories"><i data-lucide="tags" aria-hidden="true"></i> <span>Categories</span></a>
-<a href="{% url 'reports' %}" class="{% if request.resolver_match.url_name == 'reports' %}active{% endif %}" title="Reports and Analytics"><i data-lucide="chart-no-axes-combined" aria-hidden="true"></i> <span>Reports</span></a>
-<small>Nursing</small>
-<a href="{% url 'staff' %}" title="201 Files"><i data-lucide="users" aria-hidden="true"></i> <span>201 Files</span></a>
-<a href="{% url 'deliverables' %}" title="Deliverables"><i data-lucide="file-check" aria-hidden="true"></i> <span>Deliverables</span></a>
-<a href="{% url 'training' %}" title="LDNI Training"><i data-lucide="graduation-cap" aria-hidden="true"></i> <span>LDNI / Training</span></a>
-<a href="{% url 'tasks' %}" title="Deadlines"><i data-lucide="calendar-days" aria-hidden="true"></i> <span>Deadlines</span></a>
-<a href="{% url 'shifts' %}" title="Shifts"><i data-lucide="clock" aria-hidden="true"></i> <span>Shifts</span></a>
-<small>System</small>
-<a href="{% url 'users' %}" title="User Management"><i data-lucide="users" aria-hidden="true"></i> <span>Users</span></a>
-<a href="{% url 'settings' %}" title="Settings"><i data-lucide="settings" aria-hidden="true"></i> <span>Settings</span></a>
-{% if user.is_authenticated %}<a href="#" onclick="document.getElementById('logout-f').submit();return false" title="Logout"><i data-lucide="log-out" aria-hidden="true"></i> <span>Logout</span></a>
-<form id="logout-f" method="post" action="{% url 'logout' %}" style="display:none">{% csrf_token %}</form>{% endif %}
-</nav></aside>
-<div class="overlay" id="overlay"></div>
-<div class="main"><div class="topbar"><button class="iconbtn hamb" onclick="toggleSidebar()" aria-label="Toggle menu" title="Menu (sidebar)"><i data-lucide="menu"></i></button><div><h1>{{ page_title|default:"Dashboard" }}</h1><div class="crumbs">{{ breadcrumb|default:"Home" }} · <span id="ph-clock">PH time…</span></div></div>
-<div class="search"><span class="sbox"><i data-lucide="search" aria-hidden="true"></i><input id="top-search" placeholder="Search records…  ( / )" aria-label="Search records" onkeydown="if(event.key==='Enter')submitTopSearch(this.value)"></span><span class="profile-wrap" id="notif-wrap"><button class="iconbtn" onclick="toggleMenu('notif-menu')" aria-label="Notifications" title="Notifications" aria-haspopup="true"><i data-lucide="bell"></i><span class="dot" id="notif-dot"></span></button><span class="menu notif" id="notif-menu" role="menu"><b style="font-size:12px">Notifications</b><span id="notif-body"><span class="meta">Click to load.</span></span></span></span><span class="profile-wrap"><button class="avatar" onclick="toggleMenu('pmenu')" aria-label="Profile menu for {{ user.username }}" title="{{ user.username }}" aria-haspopup="true">{{ user.username|default:"?"|slice:":1"|upper }}</button><span class="menu" id="pmenu" role="menu"><a href="{% url 'settings' %}">Profile / Settings</a><a href="{% url 'password_change' %}">Change password</a></span></span></div></div>
-<div class="content" id="main-content" tabindex="-1">{% block content %}{% endblock %}</div></div></div>
-<div class="toast" id="toasts" aria-live="polite"></div>
-<script src="{% static 'js/app.js' %}"></script>{% block scripts %}{% endblock %}</body></html>
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <title>PNDMIS — {{ page_title|default:"Dashboard" }}</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+  <link rel="stylesheet" href="{% static 'css/components.css' %}">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  {% block head %}{% endblock %}
+</head>
+<body>
+<a class="skip" href="#main-content">Skip to content</a>
+<div class="app">
+  <aside class="sidebar" id="sidebar" aria-label="Primary navigation">
+    <div class="brand">
+      <span class="mark">P</span><span class="brand-name">PNDMIS</span>
+      <button class="iconbtn collapse-btn" onclick="toggleCollapse()" aria-label="Collapse sidebar" title="Collapse sidebar"><i data-lucide="chevrons-left"></i></button>
+    </div>
+    <nav class="nav">
+      <small>Main</small>
+      <a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" title="Dashboard"><i data-lucide="layout-dashboard" aria-hidden="true"></i> <span>Dashboard</span></a>
+      <a href="{% url 'records' %}" class="{% if request.resolver_match.url_name == 'records' %}active{% endif %}" title="Records Management"><i data-lucide="database" aria-hidden="true"></i> <span>Records</span></a>
+      <a href="{% url 'categories' %}" class="{% if 'categories' in request.resolver_match.url_name or 'unit_' in request.resolver_match.url_name or 'category_' in request.resolver_match.url_name %}active{% endif %}" title="Categories and units"><i data-lucide="tags" aria-hidden="true"></i> <span>Categories</span></a>
+      <a href="{% url 'reports' %}" class="{% if request.resolver_match.url_name == 'reports' %}active{% endif %}" title="Reports and Analytics"><i data-lucide="chart-no-axes-combined" aria-hidden="true"></i> <span>Reports</span></a>
+
+      <small>Nursing</small>
+      <a href="{% url 'staff' %}" class="{% if 'staff' in request.resolver_match.url_name %}active{% endif %}" title="201 Files"><i data-lucide="users" aria-hidden="true"></i> <span>201 Files</span></a>
+      <a href="{% url 'deliverables' %}" class="{% if 'deliverable' in request.resolver_match.url_name or request.resolver_match.url_name == 'submit' or request.resolver_match.url_name == 'review' %}active{% endif %}" title="Deliverables"><i data-lucide="file-check" aria-hidden="true"></i> <span>Deliverables</span></a>
+      <a href="{% url 'training' %}" class="{% if 'training' in request.resolver_match.url_name %}active{% endif %}" title="LDNI Training"><i data-lucide="graduation-cap" aria-hidden="true"></i> <span>LDNI / Training</span></a>
+      <a href="{% url 'tasks' %}" class="{% if 'task' in request.resolver_match.url_name %}active{% endif %}" title="Deadlines"><i data-lucide="calendar-days" aria-hidden="true"></i> <span>Deadlines</span></a>
+      {% if can_manage_shifts %}<a href="{% url 'shifts' %}" class="{% if 'shift' in request.resolver_match.url_name %}active{% endif %}" title="Shift counts"><i data-lucide="clock" aria-hidden="true"></i> <span>Shifts</span></a>{% endif %}
+
+      <small>System</small>
+      <a href="{% url 'notifications' %}" class="{% if 'notification' in request.resolver_match.url_name %}active{% endif %}" title="Notifications"><i data-lucide="bell" aria-hidden="true"></i> <span>Notifications</span>{% if unread_notifications %}<span class="nav-count">{{ unread_notifications }}</span>{% endif %}</a>
+      {% if can_view_audit %}<a href="{% url 'audit' %}" class="{% if request.resolver_match.url_name == 'audit' %}active{% endif %}" title="Audit trail"><i data-lucide="scroll-text" aria-hidden="true"></i> <span>Audit Trail</span></a>{% endif %}
+      {% if can_manage_users %}<a href="{% url 'users' %}" class="{% if 'user' in request.resolver_match.url_name %}active{% endif %}" title="User Management"><i data-lucide="user-cog" aria-hidden="true"></i> <span>Users</span></a>{% endif %}
+      <a href="{% url 'settings' %}" class="{% if request.resolver_match.url_name == 'settings' %}active{% endif %}" title="Settings"><i data-lucide="settings" aria-hidden="true"></i> <span>Settings</span></a>
+      {% if user.is_authenticated %}<a href="#" onclick="document.getElementById('logout-f').submit();return false" title="Logout"><i data-lucide="log-out" aria-hidden="true"></i> <span>Logout</span></a>
+      <form id="logout-f" method="post" action="{% url 'logout' %}" style="display:none">{% csrf_token %}</form>{% endif %}
+    </nav>
+    {% if nav_profile %}<div class="side-foot"><span class="role-chip">{{ nav_profile.get_role_display }}</span>{% if nav_profile.unit %}<span class="meta">{{ nav_profile.unit.name }}</span>{% endif %}</div>{% endif %}
+  </aside>
+  <div class="overlay" id="overlay"></div>
+  <div class="main">
+    <header class="topbar">
+      <button class="iconbtn hamb" onclick="toggleSidebar()" aria-label="Toggle menu" title="Menu"><i data-lucide="menu"></i></button>
+      <div class="topbar-title">
+        <h1>{{ page_title|default:"Dashboard" }}</h1>
+        <div class="crumbs">{{ breadcrumb|default:"Home" }} · <span id="ph-clock">Philippine time…</span></div>
+      </div>
+      <div class="search">
+        <span class="sbox"><i data-lucide="search" aria-hidden="true"></i><input id="top-search" placeholder="Search records…  ( / )" aria-label="Search records" onkeydown="if(event.key==='Enter')submitTopSearch(this.value)"></span>
+        <span class="profile-wrap" id="notif-wrap">
+          <button class="iconbtn notif-btn" onclick="toggleMenu('notif-menu')" aria-label="Notifications" title="Notifications" aria-haspopup="true"><i data-lucide="bell"></i>{% if unread_notifications %}<span class="count-dot" id="notif-dot">{{ unread_notifications }}</span>{% else %}<span class="count-dot" id="notif-dot" hidden>0</span>{% endif %}</button>
+          <span class="menu notif" id="notif-menu" role="menu">
+            <div class="menu-head"><b>Notifications</b><a href="{% url 'notifications' %}">View all</a></div>
+            <span id="notif-body"><span class="meta menu-empty">Loading…</span></span>
+            <div class="menu-foot"><button type="button" class="linkbtn" onclick="markAllNotifs()">Mark all read</button></div>
+          </span>
+        </span>
+        <span class="profile-wrap">
+          <button class="avatar" onclick="toggleMenu('pmenu')" aria-label="Profile menu for {{ user.username }}" title="{{ user.username }}" aria-haspopup="true">{{ user.first_name|default:user.username|slice:":1"|upper }}</button>
+          <span class="menu" id="pmenu" role="menu">
+            <div class="menu-head"><b>{{ user.get_full_name|default:user.username }}</b><span class="meta">{{ nav_profile.get_role_display|default:"No nursing role" }}</span></div>
+            <a href="{% url 'settings' %}"><i data-lucide="user-round"></i> Profile / Settings</a>
+            <a href="{% url 'password_change' %}"><i data-lucide="key-round"></i> Change password</a>
+            <a href="{% url 'notifications' %}"><i data-lucide="bell"></i> Notifications</a>
+            <a href="#" onclick="document.getElementById('logout-f').submit();return false"><i data-lucide="log-out"></i> Sign out</a>
+          </span>
+        </span>
+      </div>
+    </header>
+    <main class="content" id="main-content" tabindex="-1">
+      {% include 'core/partials/messages.html' %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+<div class="toast" id="toasts" aria-live="polite" aria-atomic="false"></div>
+<script src="{% static 'js/app.js' %}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,10 @@
+{% if messages %}
+<div class="messages" aria-live="polite">
+  {% for message in messages %}
+  <div class="message {% if message.tags %}m-{{ message.tags }}{% endif %}">
+    <span>{{ message }}</span>
+    <button type="button" class="t-x" onclick="this.parentElement.remove()" aria-label="Dismiss">×</button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}

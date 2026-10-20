@@ -1,1 +1,20 @@
-{% extends 'core/base.html' %}{% block content %}<div class="card"><h2>{{ heading }}</h2><form method="post">{% csrf_token %}{{ form.as_p }}<button class="btn" type="submit">Save</button> <a class="btn ghost" href="javascript:history.back()">Cancel</a></form></div>{% endblock %}
+{% extends 'core/base.html' %}
+{% block content %}
+<div class="card form-card">
+  <div class="page-head">
+    <div>
+      <h2>{{ heading }}</h2>
+      {% if object %}<p class="meta">{{ object }}</p>{% endif %}
+    </div>
+    {% if cancel_url %}<a class="btn ghost sm" href="{{ cancel_url }}"><i data-lucide="arrow-left"></i> Back</a>{% endif %}
+  </div>
+  <form method="post" class="stack" data-loading-form>
+    {% csrf_token %}
+    {% include 'core/partials/form_fields.html' %}
+    <div class="form-actions">
+      <button class="btn" type="submit" data-submit-label="{{ submit_label|default:'Save' }}"><i data-lucide="check"></i> {{ submit_label|default:"Save" }}</button>
+      {% if cancel_url %}<a class="btn ghost" href="{{ cancel_url }}">Cancel</a>{% endif %}
+    </div>
+  </form>
+</div>
+{% endblock %}

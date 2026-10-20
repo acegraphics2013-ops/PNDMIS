@@ -1,11 +1,84 @@
-{% extends 'core/base.html' %}{% load static %}{% block content %}
-<div class="card"><h3>Records Management</h3><p class="meta">Tasks act as records: ID · Name · Category (unit) · Status · Due / Created. All actions persist to SQLite.</p>
-<div class="filters"><button class="btn" onclick="openAdd()" {% if not can_write %}disabled title="Supervisor/manager only"{% endif %}><i data-lucide="plus"></i> Add Record</button>
-<span class="sbox"><i data-lucide="search"></i><input id="q" placeholder="Search records…" aria-label="Search records" oninput="onSearch(this.value)"></span>
-<span style="display:inline-flex;align-items:center;gap:6px"><i data-lucide="list-filter"></i><select id="f-cat" onchange="onFilter()" aria-label="Filter by category"><option value="">All categories</option>{% for u in units %}<option value="{{ u.id }}">{{ u.name }}</option>{% endfor %}</select>
-<select id="f-status" onchange="onFilter()" aria-label="Filter by status"><option value="">All statuses</option><option value="pending">Pending</option><option value="progress">In progress</option><option value="completed">Completed</option><option value="archived">Archived</option></select></span></div>
-<div class="twrap"><table><tr><th class="sortable" onclick="onSort('name')">Record Name</th><th>ID</th><th>Category</th><th class="sortable" onclick="onSort('status')">Status</th><th class="sortable" onclick="onSort('date')">Date Created</th><th>Created</th><th>Actions</th></tr><tbody id="rows"><tr><td colspan="7">Loading…</td></tr></tbody></table></div>
-<div class="pager" id="pager"></div></div>
-<div class="modal" id="modal" role="dialog" aria-modal="true"><div class="box"><h3 id="m-title">Add Record</h3><form onsubmit="saveForm(event)"><input type="hidden" id="f-id"><label for="f-name">Record name</label><input id="f-name" required minlength="3" style="width:100%"><div class="ferr" id="e-name" hidden>Name must be at least 3 characters.</div><label for="f-desc">Description</label><textarea id="f-desc" rows="3" style="width:100%"></textarea><label for="f-cat2">Category</label><select id="f-cat2"><option value="">—</option>{% for u in units %}<option value="{{ u.id }}">{{ u.name }}</option>{% endfor %}</select><label for="f-due">Date</label><input id="f-due" type="date" required><label for="f-prio">Priority</label><select id="f-prio"><option value="normal">Normal</option><option value="high">High</option><option value="critical">Critical</option></select><label for="f-status2">Status</label><select id="f-status2"><option value="pending">Pending</option><option value="progress">In progress</option><option value="completed">Completed</option><option value="archived">Archived</option></select><p style="margin-top:12px"><button class="btn"><i data-lucide="plus"></i> Save</button> <button type="button" class="btn ghost" onclick="closeModal()">Cancel</button></p></form></div></div>
-<div class="modal" id="del-modal" role="dialog" aria-modal="true"><div class="box"><h3>Delete record?</h3><p class="meta">This cannot be undone.</p><input type="hidden" id="del-id"><p><button class="btn danger" onclick="doDelete()"><i data-lucide="trash-2"></i> Delete</button> <button class="btn ghost" onclick="closeModal()">Cancel</button></p></div></div>
-{% endblock %}{% block scripts %}<script src="{% static 'js/records.js' %}"></script>{% endblock %}
+{% extends 'core/base.html' %}{% load static %}
+{% block content %}
+<div class="card">
+  <div class="page-head">
+    <div>
+      <h2>Records Management</h2>
+      <p class="meta">Tasks and operational records, scoped to your role. Changes are audited.</p>
+    </div>
+    {% if can_write %}<button class="btn" onclick="openAdd()"><i data-lucide="plus"></i> Add record</button>{% endif %}
+  </div>
+  <div class="filters">
+    <span class="sbox"><i data-lucide="search"></i><input id="q" placeholder="Search records…" aria-label="Search records"></span>
+    <select id="f-cat" aria-label="Filter by unit"><option value="">All units</option>{% for u in units %}<option value="{{ u.id }}">{{ u.name }}</option>{% endfor %}</select>
+    <select id="f-class" aria-label="Filter by classification"><option value="">All classifications</option>{% for c in categories %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
+    <select id="f-status" aria-label="Filter by status"><option value="">All statuses</option><option value="pending">Pending</option><option value="progress">In progress</option><option value="completed">Completed</option><option value="archived">Archived</option></select>
+    <select id="f-prio" aria-label="Filter by priority"><option value="">All priorities</option><option value="critical">Critical</option><option value="high">High</option><option value="normal">Normal</option></select>
+    <button class="btn ghost sm" type="button" onclick="resetFilters()"><i data-lucide="rotate-ccw"></i> Reset</button>
+  </div>
+  <div class="bulk-bar" id="bulk-bar" hidden>
+    <span><b id="bulk-count">0</b> selected</span>
+    <button class="btn ghost sm" type="button" onclick="bulkAction('archive')"><i data-lucide="archive"></i> Archive</button>
+    <button class="btn ghost sm" type="button" onclick="bulkAction('restore')"><i data-lucide="archive-restore"></i> Restore</button>
+    <button class="btn danger sm" type="button" onclick="bulkAction('delete')"><i data-lucide="trash-2"></i> Delete</button>
+    <button class="btn ghost sm" type="button" onclick="clearSelection()">Clear</button>
+  </div>
+  <div class="twrap">
+    <table class="records-table">
+      <thead><tr>
+        <th class="check-col"><input type="checkbox" id="check-all" aria-label="Select all records"></th>
+        <th class="sortable" data-sort="name">Record</th>
+        <th>ID</th>
+        <th>Unit</th>
+        <th>Classification</th>
+        <th class="sortable" data-sort="status">Status</th>
+        <th class="sortable" data-sort="priority">Priority</th>
+        <th class="sortable" data-sort="date">Due</th>
+        <th>Assigned to</th>
+        <th>Actions</th>
+      </tr></thead>
+      <tbody id="rows"><tr><td colspan="10"><div class="empty"><span class="spin"></span> Loading records…</div></td></tr></tbody>
+    </table>
+  </div>
+  <div class="pager" id="pager"></div>
+</div>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="m-title">
+  <div class="box">
+    <div class="modal-head"><h3 id="m-title">Add record</h3><button class="iconbtn" type="button" onclick="closeModal()" aria-label="Close">×</button></div>
+    <form id="record-form" onsubmit="saveForm(event)" novalidate>
+      <div class="nonfield" id="form-errors" hidden></div>
+      <input type="hidden" id="f-id">
+      <div class="form-grid">
+        <div class="field"><label for="f-name">Record name <span class="req">*</span></label><input id="f-name" required minlength="3" maxlength="250"><div class="ferr" id="e-name" hidden>Name must be at least 3 characters.</div></div>
+        <div class="field"><label for="f-cat2">Unit</label><select id="f-cat2"><option value="">—</option>{% for u in units %}<option value="{{ u.id }}">{{ u.name }}</option>{% endfor %}</select></div>
+        <div class="field"><label for="f-class2">Classification</label><select id="f-class2"><option value="">—</option>{% for c in categories %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select></div>
+        <div class="field"><label for="f-assignee">Assigned personnel</label><select id="f-assignee"><option value="">—</option>{% for a in assignees %}<option value="{{ a.id }}">{{ a.get_full_name|default:a.username }}</option>{% endfor %}</select></div>
+        <div class="field"><label for="f-due">Due date <span class="req">*</span></label><input id="f-due" type="date" required></div>
+        <div class="field"><label for="f-prio">Priority</label><select id="f-prio"><option value="normal">Normal</option><option value="high">High</option><option value="critical">Critical</option></select></div>
+        <div class="field"><label for="f-status2">Status</label><select id="f-status2"><option value="pending">Pending</option><option value="progress">In progress</option><option value="completed">Completed</option><option value="archived">Archived</option></select></div>
+        <div class="field field-wide"><label for="f-desc">Description</label><textarea id="f-desc" rows="3"></textarea></div>
+      </div>
+      <div class="form-actions"><button class="btn" type="submit"><i data-lucide="check"></i> Save record</button><button class="btn ghost" type="button" onclick="closeModal()">Cancel</button></div>
+    </form>
+  </div>
+</div>
+
+<div class="modal" id="view-modal" role="dialog" aria-modal="true" aria-labelledby="v-title">
+  <div class="box">
+    <div class="modal-head"><h3 id="v-title">Record detail</h3><button class="iconbtn" type="button" onclick="closeModal()" aria-label="Close">×</button></div>
+    <div id="view-body" class="view-body"></div>
+    <div class="form-actions"><button class="btn ghost" type="button" onclick="closeModal()">Close</button></div>
+  </div>
+</div>
+
+<div class="modal" id="del-modal" role="dialog" aria-modal="true" aria-labelledby="d-title">
+  <div class="box">
+    <div class="modal-head"><h3 id="d-title">Confirm action</h3><button class="iconbtn" type="button" onclick="closeModal()" aria-label="Close">×</button></div>
+    <p id="del-text" class="meta">This action cannot be undone.</p>
+    <input type="hidden" id="del-id">
+    <div class="form-actions"><button class="btn danger" type="button" id="del-confirm" onclick="doDelete()"><i data-lucide="trash-2"></i> Confirm</button><button class="btn ghost" type="button" onclick="closeModal()">Cancel</button></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/records.js' %}"></script>{% endblock %}

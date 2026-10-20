@@ -1,19 +1,115 @@
-{% extends 'core/base.html' %}{% load static %}{% block content %}
-<div class="grid">
-<a class="card stat" href="{% url 'records' %}" title="Open Records" style="text-decoration:none;color:inherit"><div class="ic"><i data-lucide="database"></i></div><div><div class="num">{{ total_records }}</div><div class="lbl">Total Records</div></div></a>
-<a class="card stat" href="{% url 'staff' %}" title="Open 201 Files" style="text-decoration:none;color:inherit"><div class="ic"><i data-lucide="users"></i></div><div><div class="num">{{ active_records }}</div><div class="lbl">Active Records</div></div></a>
-<a class="card stat" href="{% url 'tasks' %}?filter=open" title="Open pending" style="text-decoration:none;color:inherit"><div class="ic"><i data-lucide="calendar-days"></i></div><div><div class="num">{{ pending_records }}</div><div class="lbl">Pending Records</div></div></a>
-<a class="card stat" href="{% url 'tasks' %}?filter=all" title="Open archived" style="text-decoration:none;color:inherit"><div class="ic"><i data-lucide="archive"></i></div><div><div class="num">{{ archived_records }}</div><div class="lbl">Archived Records</div></div></a>
+{% extends 'core/base.html' %}{% load static core_extras %}
+{% block content %}
+<div class="welcome">
+  <div>
+    <h2>{{ role }} workspace</h2>
+    <p class="meta">{{ ph_now|date:"l, F j, Y · g:i A" }} · Signed in as {{ user.get_full_name|default:user.username }}</p>
+  </div>
+  {% if user_role == 'staff' %}<a class="btn ghost sm" href="{% url 'deliverables' %}"><i data-lucide="file-check"></i> My deliverables</a>
+  {% elif user_role == 'manager' %}<a class="btn ghost sm" href="{% url 'deliverables' %}?status=submitted"><i data-lucide="clipboard-check"></i> Verification queue</a>
+  {% else %}<a class="btn ghost sm" href="{% url 'reports' %}"><i data-lucide="chart-no-axes-combined"></i> Open reports</a>{% endif %}
 </div>
-<div class="grid">
-<div class="card"><h3>Staff overview</h3><p class="meta">Active: {{ staff_count }} · On-duty today: {{ on_duty_total }} · Overdue: {{ overdue }} · Due soon: {{ tasks_due_soon }} · {{ ph_now|date:"M j, Y g:i A" }}</p>
-<h4>Active staff per unit</h4><div class="twrap"><table><tr><th>Unit</th><th>Count</th></tr>{% for r in staff_per_unit %}<tr><td>{{ r.unit__name }}</td><td>{{ r.count }}</td></tr>{% empty %}<tr><td colspan="2"><div class="empty"><h3>No staff records</h3><p>Create StaffRecord entries to populate.</p></div></td></tr>{% endfor %}</table></div></div>
-<div class="card"><h3>On-duty today ({{ today }})</h3><div class="twrap"><table><tr><th>Unit</th><th>Shift</th><th>On duty</th></tr>{% for s in shift_today %}<tr><td>{{ s.unit }}</td><td>{{ s.get_shift_display }}</td><td>{{ s.on_duty }}</td></tr>{% empty %}<tr><td colspan="3"><div class="empty"><h3>No shift count</h3><p>Enter counts in Shifts.</p></div></td></tr>{% endfor %}</table></div></div>
+
+<div class="stats-grid">
+  {% for card in cards %}
+  <a class="card stat tone-{{ card.tone }}" href="{{ card.url }}">
+    <div class="ic"><i data-lucide="{{ card.icon }}"></i></div>
+    <div><div class="num">{{ card.value }}</div><div class="lbl">{{ card.label }}</div></div>
+    <i class="stat-arrow" data-lucide="arrow-up-right" aria-hidden="true"></i>
+  </a>
+  {% endfor %}
 </div>
+
+{% if user_role == 'staff' %}
+<div class="grid-2">
+  <div class="card">
+    <div class="card-head"><h3>My requirements</h3><a class="meta" href="{% url 'deliverables' %}">View all</a></div>
+    <div class="twrap"><table><thead><tr><th>Type</th><th>Period</th><th>Due</th><th>Status</th></tr></thead><tbody>
+    {% for d in deliverables %}<tr class="{% if d.is_overdue %}overdue{% endif %}"><td><a href="{% url 'deliverable_detail' d.pk %}">{{ d.type }}</a></td><td>{{ d.period }}</td><td>{{ d.due_date }}</td><td><span class="badge {{ d.status|badge_class }}">{{ d.get_status_display }}</span></td></tr>
+    {% empty %}<tr><td colspan="4"><div class="empty"><h3>No requirements</h3><p>New requirements assigned to you will appear here.</p></div></td></tr>{% endfor %}
+    </tbody></table></div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h3>My deadlines</h3><a class="meta" href="{% url 'tasks' %}?filter=open">View all</a></div>
+    <div class="twrap"><table><thead><tr><th>Task</th><th>Due</th><th>Priority</th><th>Status</th></tr></thead><tbody>
+    {% for t in tasks %}<tr class="{% if t.due_date < today and t.status != 'completed' %}overdue{% endif %}"><td>{{ t.title }}</td><td>{{ t.due_date }}</td><td><span class="badge {{ t.priority|badge_class }}">{{ t.get_priority_display }}</span></td><td>{{ t.get_status_display }}</td></tr>
+    {% empty %}<tr><td colspan="4"><div class="empty"><h3>No assigned tasks</h3><p>You are all clear.</p></div></td></tr>{% endfor %}
+    </tbody></table></div>
+  </div>
+</div>
+<div class="grid-2">
+  <div class="card">
+    <div class="card-head"><h3>My training</h3><a class="meta" href="{% url 'training' %}">Training history</a></div>
+    {% if my_training %}<ul class="list">{% for t in my_training %}<li><div><b>{{ t.title }}</b><div class="meta">{{ t.date }} · {{ t.hours }} hours · {{ t.provider|default:"No provider" }}</div></div><span class="badge {{ t.validation_status|badge_class }}">{{ t.get_validation_status_display }}</span></li>{% endfor %}</ul>{% else %}<div class="empty"><h3>No training yet</h3><p>Record your seminars and clinical training.</p></div>{% endif %}
+  </div>
+  <div class="card">
+    <h3>My 201 profile</h3>
+    {% if my_staff %}
+    <dl class="detail-list">
+      <div><dt>Unit</dt><dd>{{ my_staff.unit }}</dd></div>
+      <div><dt>Position</dt><dd>{{ my_staff.position|default:"—" }}</dd></div>
+      <div><dt>Employment</dt><dd>{{ my_staff.get_employment_status_display }}</dd></div>
+      <div><dt>PRC expiry</dt><dd>{{ my_staff.prc_expiry|default:"—" }}{% if license_days != None %} <span class="badge {% if license_days < 0 %}b-overdue{% elif license_days <= 90 %}b-soon{% else %}b-ok{% endif %}">{% if license_days < 0 %}Expired {{ license_days|slice:1 }}d ago{% else %}{{ license_days }} days{% endif %}</span>{% endif %}</dd></div>
+      <div><dt>Training hours</dt><dd>{{ training_hours }}</dd></div>
+    </dl>
+    <p><a class="btn ghost sm" href="{% url 'staff_detail' my_staff.pk %}">Open my 201 file</a></p>
+    {% else %}<div class="empty"><h3>201 file not created</h3><p>Ask a supervisor to create your staff record.</p></div>{% endif %}
+  </div>
+</div>
+{% else %}
+<div class="grid-2">
+  <div class="card">
+    <div class="card-head"><h3>{% if user_role == 'manager' %}Unit staffing{% else %}Staff overview{% endif %}</h3><a class="meta" href="{% url 'staff' %}">201 Files</a></div>
+    <div class="twrap"><table><thead><tr><th>Unit</th><th>Active staff</th><th>Overdue deliverables</th></tr></thead><tbody>
+    {% for u in unit_summary %}<tr><td>{{ u.name }}</td><td>{{ u.staff_count }}</td><td>{% if u.overdue_count %}<span class="badge b-overdue">{{ u.overdue_count }}</span>{% else %}<span class="badge b-ok">0</span>{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="3"><div class="empty"><h3>No units</h3><p>Create units under Categories.</p></div></td></tr>{% endfor %}
+    </tbody></table></div>
+    <div class="mini-summary"><span><i data-lucide="users"></i> {{ staff_count }} active staff</span><span><i data-lucide="clock"></i> {{ on_duty_total }} on duty today</span><span><i data-lucide="alarm-clock"></i> {{ tasks_overdue }} overdue tasks</span></div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h3>On duty today</h3><span class="meta">{{ today }}</span></div>
+    <div class="twrap"><table><thead><tr><th>Unit</th><th>Shift</th><th>On duty</th></tr></thead><tbody>
+    {% for s in shift_today %}<tr><td>{{ s.unit }}</td><td><span class="badge {{ s.shift|badge_class }}">{{ s.get_shift_display }}</span></td><td>{{ s.on_duty }}</td></tr>
+    {% empty %}<tr><td colspan="3"><div class="empty"><h3>No shift count</h3><p>{% if user_role == 'manager' %}Enter today’s counts in Shifts.{% else %}No unit counts entered yet.{% endif %}</p></div></td></tr>{% endfor %}
+    </tbody></table></div>
+    {% if user_role == 'manager' %}<p><a class="btn ghost sm" href="{% url 'add_shift' %}"><i data-lucide="plus"></i> Enter shift count</a></p>{% endif %}
+  </div>
+</div>
+
 <div class="charts charts-sm">
-<div class="card chart-sm"><h3>Records overview</h3><div class="doughnut-sm"><canvas id="ch-status" width="180" height="160"></canvas></div></div>
-<div class="card"><h3>Category distribution</h3><div class="bar-sm"><canvas id="ch-unit" height="160"></canvas></div></div>
+  <div class="card chart-sm"><h3>Deliverable status</h3><div class="doughnut-sm"><canvas id="ch-status" width="180" height="160"></canvas></div></div>
+  <div class="card"><div class="card-head"><h3>Active staff per unit</h3><a class="meta" href="{% url 'reports' %}">Reports</a></div><div class="bar-sm"><canvas id="ch-unit" height="160"></canvas></div></div>
 </div>
-<div class="card"><h3>Recent activity</h3>{% if recent_activity %}<ul class="activity">{% for a in recent_activity %}<li>{{ a.occurred_at|date:"M d H:i" }} — <b>{{ a.actor.username }}</b> {{ a.event }} ({{ a.object_type }} #{{ a.object_id }})</li>{% endfor %}</ul>{% else %}<div class="empty"><h3>No recent activity</h3><p>Actions will appear here.</p></div>{% endif %}</div>
-<div class="card"><h3>Overdue submissions</h3><div class="twrap"><table><tr><th>Staff</th><th>Type</th><th>Period</th><th>Due</th><th>Status</th></tr>{% for d in overdue_list %}<tr class="overdue"><td>{{ d.staff.user.username }}</td><td>{{ d.type }}</td><td>{{ d.period }}</td><td>{{ d.due_date }}</td><td><span class="badge b-overdue">{{ d.get_status_display }}</span></td></tr>{% empty %}<tr><td colspan="5"><div class="empty"><h3>No overdue items</h3><p>All caught up.</p></div></td></tr>{% endfor %}</table></div></div>
-{% endblock %}{% block scripts %}<script src="{% static 'js/dashboard.js' %}"></script>{% endblock %}
+
+<div class="card">
+  <div class="card-head"><h3>{% if user_role == 'manager' %}Awaiting verification{% else %}Awaiting final approval{% endif %}</h3><a class="meta" href="{% url 'deliverables' %}{% if user_role == 'manager' %}?status=submitted{% else %}?status=verified{% endif %}">Open queue</a></div>
+  <div class="twrap"><table><thead><tr><th>Staff</th><th>Unit</th><th>Type</th><th>Period</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody>
+  {% for d in approval_queue %}<tr class="{% if d.is_overdue %}overdue{% endif %}"><td>{{ d.staff }}</td><td>{{ d.staff.unit }}</td><td>{{ d.type }}</td><td>{{ d.period }}</td><td>{{ d.due_date }}</td><td><span class="badge {{ d.status|badge_class }}">{{ d.get_status_display }}</span></td><td><a class="btn ghost sm" href="{% url 'deliverable_detail' d.pk %}">Review</a></td></tr>
+  {% empty %}<tr><td colspan="7"><div class="empty"><h3>Nothing waiting</h3><p>The queue is clear.</p></div></td></tr>{% endfor %}
+  </tbody></table></div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card-head"><h3>Overdue submissions</h3><a class="meta" href="{% url 'deliverables' %}?overdue=1">View all</a></div>
+    <div class="twrap"><table><thead><tr><th>Staff</th><th>Type</th><th>Period</th><th>Due</th></tr></thead><tbody>
+    {% for d in overdue_list %}<tr class="overdue"><td>{{ d.staff }}</td><td>{{ d.type }}</td><td>{{ d.period }}</td><td>{{ d.due_date }}</td></tr>
+    {% empty %}<tr><td colspan="4"><div class="empty"><h3>No overdue items</h3><p>All caught up.</p></div></td></tr>{% endfor %}
+    </tbody></table></div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h3>PRC license watch</h3><a class="meta" href="{% url 'reports' %}?kind=licenses">Report</a></div>
+    <div class="twrap"><table><thead><tr><th>Staff</th><th>Unit</th><th>Expiry</th><th>Status</th></tr></thead><tbody>
+    {% for s in expiring_licenses %}<tr><td><a href="{% url 'staff_detail' s.pk %}">{{ s }}</a></td><td>{{ s.unit }}</td><td>{{ s.prc_expiry }}</td><td>{% if s.prc_expiry < today %}<span class="badge b-overdue">Expired</span>{% else %}<span class="badge b-soon">Expiring</span>{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="4"><div class="empty"><h3>No upcoming expiries</h3><p>Within the next 90 days.</p></div></td></tr>{% endfor %}
+    </tbody></table></div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card"><h3>Training summary</h3><div class="quick-stats"><div><b>{{ training_hours }}</b><span>total hours</span></div><div><b>{{ training_validated }}</b><span>validated</span></div><div><b>{{ training_pending }}</b><span>pending validation</span></div></div><p><a class="btn ghost sm" href="{% url 'training' %}">Open LDNI / Training</a></p></div>
+  <div class="card"><h3>Recent activity</h3>{% if recent_activity %}<ul class="activity">{% for a in recent_activity %}<li><span class="meta">{{ a.occurred_at|date:"M d · H:i" }}</span> — <b>{{ a.actor.username }}</b> {{ a.event|cut:"_"|capfirst }} <span class="meta">({{ a.object_type }} #{{ a.object_id }})</span></li>{% endfor %}</ul>{% else %}<div class="empty"><h3>No recent activity</h3><p>Audited actions will appear here.</p></div>{% endif %}</div>
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/dashboard.js' %}"></script>{% endblock %}
