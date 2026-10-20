@@ -1,1 +1,59 @@
-{% extends 'core/base.html' %}{% block content %}<div class="card"><h3>Unit staffing counts</h3><p><a class="btn sm" href="{% url 'add_shift' %}">Enter shift count</a></p><div class="twrap"><table><tr><th>Unit</th><th>Date</th><th>Shift</th><th>On duty</th></tr>{% for s in shifts %}<tr><td>{{ s.unit }}</td><td>{{ s.date }}</td><td>{{ s.shift }}</td><td>{{ s.on_duty }}</td></tr>{% empty %}<tr><td colspan="4"><div class="empty"><h3>No records</h3><p>Enter shift counts per unit.</p></div></td></tr>{% endfor %}</table></div></div>{% endblock %}
+{% extends 'core/base.html' %}{% load core_extras %}
+{% block content %}
+<div class="card">
+  <div class="page-head">
+    <div><h2>Unit staffing counts</h2><p class="meta">Daily day/night on-duty counts. This is a count model only; individual rosters and patient ratios are not implied.</p></div>
+    <div class="head-actions">
+      <a class="btn ghost" href="?month={{ month_value|default:current_month }}"><i data-lucide="calendar-days"></i> {% if month_value %}Refresh calendar{% else %}Calendar view{% endif %}</a>
+      <a class="btn" href="{% url 'add_shift' %}"><i data-lucide="plus"></i> Enter shift count</a>
+    </div>
+  </div>
+  <div class="quick-stats four">
+    <div><b>{{ summary.records }}</b><span>entries in range</span></div>
+    <div><b>{{ summary.day }}</b><span>day on-duty total</span></div>
+    <div><b>{{ summary.night }}</b><span>night on-duty total</span></div>
+    <div><b>{{ summary.day|add:summary.night }}</b><span>combined on-duty</span></div>
+  </div>
+  <form method="get" class="filters">
+    <select name="unit" aria-label="Filter by unit"><option value="">All units</option>{% for u in units %}<option value="{{ u.pk }}" {% if f_unit == u.pk|stringformat:'s' %}selected{% endif %}>{{ u.name }}</option>{% endfor %}</select>
+    <select name="shift" aria-label="Filter by shift"><option value="">All shifts</option><option value="day" {% if f_shift == 'day' %}selected{% endif %}>Day</option><option value="night" {% if f_shift == 'night' %}selected{% endif %}>Night</option></select>
+    <label class="inline-label">From <input type="date" name="start" value="{{ start|date:'Y-m-d' }}"></label>
+    <label class="inline-label">To <input type="date" name="end" value="{{ end|date:'Y-m-d' }}"></label>
+    <label class="inline-label">Month <input type="month" name="month" value="{{ month_value }}"></label>
+    <button class="btn ghost sm" type="submit"><i data-lucide="filter"></i> Filter</button>
+    <a class="btn ghost sm" href="{% url 'shifts' %}">Reset</a>
+  </form>
+</div>
+
+{% if month_value %}
+<div class="card">
+  <div class="page-head"><div><h3>{{ month_label }} calendar</h3><p class="meta">Counts grouped by date and unit.</p></div><div class="head-actions"><a class="btn ghost sm" href="?month={{ prev_month }}">← Previous</a><a class="btn ghost sm" href="?month={{ next_month }}">Next →</a></div></div>
+  <div class="calendar">
+    <div class="cal-head"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+    {% for week in calendar_rows %}
+    <div class="cal-week">
+      {% for cell in week %}
+      <div class="cal-day {% if not cell.in_month %}out{% endif %} {% if cell.date == today %}today{% endif %}">
+        <div class="cal-date">{{ cell.date.day }}</div>
+        {% for s in cell.entries %}
+        <div class="cal-entry {{ s.shift }}"><a href="{% url 'shift_edit' s.pk %}" title="Edit shift">{{ s.unit.name|truncatechars:14 }} · {{ s.get_shift_display|slice:":1" }}: {{ s.on_duty }}</a></div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-head"><h3>Shift entries</h3><span class="meta">{{ start|date:"M j, Y" }} – {{ end|date:"M j, Y" }}</span></div>
+  <div class="twrap">
+    <table><thead><tr><th>Unit</th><th>Date</th><th>Shift</th><th>On duty</th><th>Entered by</th><th>Updated</th><th>Actions</th></tr></thead><tbody>
+    {% for s in shifts %}<tr><td>{{ s.unit }}</td><td>{{ s.date }}</td><td><span class="badge {{ s.shift|badge_class }}">{{ s.get_shift_display }}</span></td><td>{{ s.on_duty }}</td><td>{{ s.entered_by.username }}</td><td>{{ s.updated_at|date:"Y-m-d H:i" }}</td><td class="actions"><a class="btn ghost sm" href="{% url 'shift_edit' s.pk %}">Edit</a><form method="post" action="{% url 'shift_delete' s.pk %}" class="inline-form" onsubmit="return confirm('Delete this shift count? The deletion is audited.')">{% csrf_token %}<button class="btn danger sm" type="submit">Delete</button></form></td></tr>
+    {% empty %}<tr><td colspan="7"><div class="empty"><h3>No shift counts</h3><p>Enter a count for your unit.</p></div></td></tr>{% endfor %}
+    </tbody></table>
+  </div>
+  {% include 'core/partials/pagination.html' %}
+</div>
+{% endblock %}

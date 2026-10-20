@@ -1,0 +1,13 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<div class="card form-card">
+  <div class="page-head"><div><h2>Bulk / recurring deliverables</h2><p class="meta">Select staff and generate one requirement per month. Existing combinations are skipped safely.</p></div><a class="btn ghost sm" href="{{ cancel_url }}">Back</a></div>
+  {% if result %}<div class="notice"><b>Result:</b> {{ result.created }} created · {{ result.skipped }} skipped · {{ result.staff }} staff × {{ result.periods }} month(s).</div>{% endif %}
+  <form method="post" class="stack" data-loading-form>
+    {% csrf_token %}
+    {% include 'core/partials/form_fields.html' %}
+    <div class="form-actions"><button class="btn" type="submit"><i data-lucide="layers"></i> Generate deliverables</button><a class="btn ghost" href="{{ cancel_url }}">Cancel</a></div>
+  </form>
+  <p class="meta">Periods are generated as YYYY-MM. Due dates use the selected day of each month (maximum 28). Duplicate staff/type/period records are skipped.</p>
+</div>
+{% endblock %}

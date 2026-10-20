@@ -1,1 +1,69 @@
-{% extends 'core/base.html' %}{% block content %}<div class="card"><h3>201 File — {{ s.user.get_full_name|default:s.user.username }}</h3><p><a class="btn ghost sm" href="{% url 'staff' %}">Back to directory</a></p><div class="twrap"><table><tr><th>Field</th><th>Value</th></tr><tr><td>Username</td><td>{{ s.user.username }}</td></tr><tr><td>Unit assignment</td><td>{{ s.unit }}</td></tr><tr><td>Position</td><td>{{ s.position }}</td></tr><tr><td>Employment status</td><td>{% if s.active %}<span class="badge b-ok">Active</span>{% else %}<span class="badge b-done">Inactive</span>{% endif %}</td></tr>{% if show_sensitive %}<tr><td>Birthday</td><td>{{ s.birthday|default:"—" }}</td></tr><tr><td>Contact number</td><td>{{ s.contact_number|default:"—" }}</td></tr><tr><td>Address</td><td>{{ s.address|default:"—" }}</td></tr>{% else %}<tr><td>Birthday / Contact / Address</td><td><span class="meta">Restricted — supervisor or owner only</span></td></tr>{% endif %}<tr><td>PRC license No.</td><td>{{ s.prc_number|default:"—" }}</td></tr><tr><td>PRC expiry</td><td>{{ s.prc_expiry|default:"—" }}</td></tr><tr><td>PNA membership</td><td>{{ s.pna_membership|default:"—" }}</td></tr><tr><td>ANSAP membership</td><td>{{ s.ansap_membership|default:"—" }}</td></tr></table></div></div><div class="card"><h3>Deliverables</h3><div class="twrap"><table><tr><th>Type</th><th>Period</th><th>Due</th><th>Status</th><th>Submitted</th></tr>{% for d in deliverables %}<tr><td>{{ d.type }}</td><td>{{ d.period }}</td><td>{{ d.due_date }}</td><td>{{ d.get_status_display }}</td><td>{{ d.submitted_at|default:"—" }}</td></tr>{% empty %}<tr><td colspan="5"><div class="empty">None</div></td></tr>{% endfor %}</table></div></div><div class="card"><h3>LDNI / Training history</h3><div class="twrap"><table><tr><th>Title</th><th>Date</th><th>Hours</th><th>Provider</th><th>Status</th><th>Certificate</th></tr>{% for t in trainings %}<tr><td>{{ t.title }}</td><td>{{ t.date }}</td><td>{{ t.hours }}</td><td>{{ t.provider }}</td><td>{{ t.status }}</td><td>{{ t.certificate_reference|default:"—" }}</td></tr>{% empty %}<tr><td colspan="6"><div class="empty">None</div></td></tr>{% endfor %}</table></div></div>{% endblock %}
+{% extends 'core/base.html' %}{% load core_extras %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h2>201 File — {{ s.user.get_full_name|default:s.user.username }}</h2>
+    <p class="meta">{{ s.position|default:"No position recorded" }} · {{ s.unit }}{% if s.employee_number %} · Employee no. {{ s.employee_number }}{% endif %}</p>
+  </div>
+  <div class="head-actions">
+    <a class="btn ghost sm" href="{% url 'staff' %}"><i data-lucide="arrow-left"></i> Directory</a>
+    {% if can_edit %}<a class="btn sm" href="{% url 'staff_edit' s.pk %}"><i data-lucide="pencil"></i> Edit</a>{% endif %}
+    {% if can_toggle %}<form method="post" action="{% url 'staff_toggle' s.pk %}" class="inline-form" onsubmit="return confirm('Change the active status of this 201 file?')">{% csrf_token %}<button class="btn ghost sm" type="submit">{% if s.active %}Deactivate{% else %}Activate{% endif %}</button></form>{% endif %}
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card-head"><h3>Employment</h3>{% if s.active %}<span class="badge b-ok">Active</span>{% else %}<span class="badge b-done">Inactive</span>{% endif %}</div>
+    <dl class="detail-list">
+      <div><dt>Username</dt><dd>{{ s.user.username }}</dd></div>
+      <div><dt>Email</dt><dd>{{ s.user.email|default:"—" }}</dd></div>
+      <div><dt>Unit</dt><dd>{{ s.unit }}</dd></div>
+      <div><dt>Position</dt><dd>{{ s.position|default:"—" }}</dd></div>
+      <div><dt>Employment status</dt><dd>{{ s.get_employment_status_display }}</dd></div>
+      <div><dt>Employee number</dt><dd>{{ s.employee_number|default:"—" }}</dd></div>
+      <div><dt>Account status</dt><dd>{% if s.user.is_active %}<span class="badge b-ok">Enabled</span>{% else %}<span class="badge b-overdue">Disabled</span>{% endif %}</dd></div>
+      <div><dt>Last login</dt><dd>{{ s.user.last_login|default:"Never" }}</dd></div>
+    </dl>
+  </div>
+  <div class="card">
+    <div class="card-head"><h3>Professional &amp; contact</h3>{% if not show_sensitive %}<span class="badge b-done">Restricted</span>{% endif %}</div>
+    {% if show_sensitive %}
+    <dl class="detail-list">
+      <div><dt>PRC license no.</dt><dd>{{ s.prc_number|default:"—" }}</dd></div>
+      <div><dt>PRC expiry</dt><dd>{{ s.prc_expiry|default:"—" }}{% if license_days != None %}<br><span class="badge {% if license_days < 0 %}b-overdue{% elif license_days <= 90 %}b-soon{% else %}b-ok{% endif %}">{% if license_days < 0 %}Expired {{ license_days }} days ago{% else %}{{ license_days }} days remaining{% endif %}</span>{% endif %}</dd></div>
+      <div><dt>PNA membership</dt><dd>{{ s.pna_membership|default:"—" }}</dd></div>
+      <div><dt>ANSAP membership</dt><dd>{{ s.ansap_membership|default:"—" }}</dd></div>
+      <div><dt>Birthday</dt><dd>{{ s.birthday|default:"—" }}</dd></div>
+      <div><dt>Contact number</dt><dd>{{ s.contact_number|default:"—" }}</dd></div>
+      <div><dt>Address</dt><dd>{{ s.address|default:"—" }}</dd></div>
+      <div><dt>Secure document ref.</dt><dd>{{ s.document_reference|default:"—" }}</dd></div>
+    </dl>
+    {% else %}<p class="meta">Birthday, contact, address, PRC and document references are restricted to the supervisor or the record owner.</p>{% endif %}
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card-head"><h3>Deliverables</h3><a class="meta" href="{% url 'deliverables' %}?staff={{ s.pk }}">Open module</a></div>
+    <div class="twrap"><table><thead><tr><th>Type</th><th>Period</th><th>Due</th><th>Status</th><th>Submitted</th></tr></thead><tbody>
+    {% for d in deliverables %}<tr class="{% if d.is_overdue %}overdue{% endif %}"><td><a href="{% url 'deliverable_detail' d.pk %}">{{ d.type }}</a></td><td>{{ d.period }}</td><td>{{ d.due_date }}</td><td><span class="badge {{ d.status|badge_class }}">{{ d.get_status_display }}</span></td><td>{{ d.submitted_at|date:"Y-m-d H:i"|default:"—" }}</td></tr>
+    {% empty %}<tr><td colspan="5"><div class="empty"><h3>No deliverables</h3><p>No requirements assigned yet.</p></div></td></tr>{% endfor %}
+    </tbody></table></div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h3>Training history</h3><a class="meta" href="{% url 'training' %}">Open LDNI</a></div>
+    <div class="twrap"><table><thead><tr><th>Title</th><th>Date</th><th>Hours</th><th>Validation</th></tr></thead><tbody>
+    {% for t in trainings %}<tr><td><a href="{% url 'training_detail' t.pk %}">{{ t.title }}</a></td><td>{{ t.date }}</td><td>{{ t.hours }}</td><td><span class="badge {{ t.validation_status|badge_class }}">{{ t.get_validation_status_display }}</span></td></tr>
+    {% empty %}<tr><td colspan="4"><div class="empty"><h3>No training</h3><p>No LDNI records yet.</p></div></td></tr>{% endfor %}
+    </tbody></table></div>
+  </div>
+</div>
+
+{% if user_role == 'supervisor' or s.user_id == user.id %}
+<div class="grid-2">
+  <div class="card"><h3>201 file history</h3>{% if audit_history %}<ul class="activity">{% for a in audit_history %}<li><span class="meta">{{ a.occurred_at|date:"M d · H:i" }}</span> — <b>{{ a.actor.username }}</b> {{ a.event|cut:"_"|capfirst }}</li>{% endfor %}</ul>{% else %}<p class="meta">No changes recorded.</p>{% endif %}</div>
+  <div class="card"><h3>Account access history</h3>{% if access_history %}<ul class="activity">{% for a in access_history %}<li><span class="meta">{{ a.occurred_at|date:"M d · H:i" }}</span> — {{ a.event|cut:"_"|capfirst }} from {{ a.ip_address|default:"unknown address" }}</li>{% endfor %}</ul>{% else %}<p class="meta">No access events recorded.</p>{% endif %}</div>
+</div>
+{% endif %}
+{% endblock %}

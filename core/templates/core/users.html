@@ -1,3 +1,40 @@
-{% extends 'core/base.html' %}{% block content %}
-<div class="card"><h3>User Management</h3><p class="meta">Supervisor only. Passwords hashed (PBKDF2). Create users in <a href="/admin/">Admin</a>, then attach Profile.</p><div class="twrap"><table><tr><th>Username</th><th>Role</th><th>Unit</th><th>Staff flag</th></tr>{% for p in profiles %}<tr><td>{{ p.user.username }}</td><td>{{ p.get_role_display }}</td><td>{{ p.unit|default:"—" }}</td><td>{% if p.user.is_staff %}staff{% else %}—{% endif %}</td></tr>{% empty %}<tr><td colspan="4"><div class="empty">No users</div></td></tr>{% endfor %}</table></div></div>
+{% extends 'core/base.html' %}{% load core_extras %}
+{% block content %}
+<div class="card">
+  <div class="page-head">
+    <div><h2>User Management</h2><p class="meta">Least-privilege administration. Role changes are audited; at least one active supervisor is always retained.</p></div>
+    <a class="btn" href="{% url 'user_add' %}"><i data-lucide="user-plus"></i> Create user</a>
+  </div>
+  <form method="get" class="filters">
+    <span class="sbox"><i data-lucide="search"></i><input name="q" value="{{ q }}" placeholder="Search username, name, email…" aria-label="Search users"></span>
+    <select name="role" aria-label="Filter by role"><option value="">All roles</option><option value="supervisor" {% if role_filter == 'supervisor' %}selected{% endif %}>Supervisor</option><option value="manager" {% if role_filter == 'manager' %}selected{% endif %}>Unit manager</option><option value="staff" {% if role_filter == 'staff' %}selected{% endif %}>Nursing staff</option></select>
+    <select name="unit" aria-label="Filter by unit"><option value="">All units</option>{% for u in units %}<option value="{{ u.pk }}" {% if unit_filter == u.pk|stringformat:'s' %}selected{% endif %}>{{ u.name }}</option>{% endfor %}</select>
+    <select name="status" aria-label="Filter by account status"><option value="">All statuses</option><option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option><option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option></select>
+    <button class="btn ghost sm" type="submit"><i data-lucide="filter"></i> Filter</button>
+    <a class="btn ghost sm" href="{% url 'users' %}">Reset</a>
+  </form>
+  <div class="twrap">
+    <table>
+      <thead><tr><th>User</th><th>Role</th><th>Unit</th><th>Account</th><th>Last login</th><th>201 file</th><th>Actions</th></tr></thead>
+      <tbody>
+      {% for p in profiles %}
+        <tr>
+          <td><b>{{ p.user.get_full_name|default:p.user.username }}</b><div class="meta">{{ p.user.username }}{% if p.user.email %} · {{ p.user.email }}{% endif %}</div></td>
+          <td><span class="badge b-info">{{ p.get_role_display }}</span></td>
+          <td>{{ p.unit|default:"—" }}</td>
+          <td>{% if p.user.is_active %}<span class="badge b-ok">Active</span>{% else %}<span class="badge b-overdue">Inactive</span>{% endif %}</td>
+          <td>{{ p.user.last_login|date:"Y-m-d H:i"|default:"Never" }}</td>
+          <td>{% if p.user.staff_record %}<a class="btn ghost sm" href="{% url 'staff_detail' p.user.staff_record.pk %}">Open</a>{% else %}<span class="meta">None</span>{% endif %}</td>
+          <td class="actions">
+            <a class="btn ghost sm" href="{% url 'user_edit' p.user_id %}">Edit</a>
+            <form method="post" action="{% url 'user_reset_password' p.user_id %}" class="inline-form" onsubmit="return confirm('Generate a secure password reset message for {{ p.user.username|escapejs }}?')">{% csrf_token %}<button class="btn ghost sm" type="submit">Reset password</button></form>
+            {% if p.user_id != user.id %}<form method="post" action="{% url 'user_toggle' p.user_id %}" class="inline-form" onsubmit="return confirm('Change the account status for {{ p.user.username|escapejs }}?')">{% csrf_token %}<button class="btn ghost sm" type="submit">{% if p.user.is_active %}Deactivate{% else %}Activate{% endif %}</button></form>{% endif %}
+          </td>
+        </tr>
+      {% empty %}<tr><td colspan="7"><div class="empty"><h3>No users found</h3><p>Try different filters.</p></div></td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include 'core/partials/pagination.html' %}
+</div>
 {% endblock %}

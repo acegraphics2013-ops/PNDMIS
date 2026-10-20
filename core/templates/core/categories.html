@@ -1,4 +1,36 @@
-{% extends 'core/base.html' %}{% block content %}
-<div class="card"><h3>Categories — Units</h3><div class="twrap"><table><tr><th>ID</th><th>Name</th><th>Staff</th><th>Tasks</th></tr>{% for u in units %}<tr><td>{{ u.id }}</td><td>{{ u.name }}</td><td>{{ u.staff_count }}</td><td>{{ u.task_count }}</td></tr>{% empty %}<tr><td colspan="4"><div class="empty"><h3>No categories</h3><p>Ask a supervisor to add units via Admin.</p></div></td></tr>{% endfor %}</table></div></div>
-<div class="card"><h3>Deliverable types</h3><div class="twrap"><table><tr><th>Type</th><th>Count</th></tr>{% for t in type_counts %}<tr><td>{{ t.type }}</td><td>{{ t.count }}</td></tr>{% empty %}<tr><td colspan="2"><div class="empty">No deliverables yet</div></td></tr>{% endfor %}</table></div></div>
+{% extends 'core/base.html' %}{% load core_extras %}
+{% block content %}
+<div class="grid-2">
+  <div class="card">
+    <div class="page-head">
+      <div><h2>Units</h2><p class="meta">Department units used for staff assignment and access scoping.</p></div>
+      {% if can_write %}<a class="btn" href="{% url 'unit_add' %}"><i data-lucide="plus"></i> Add unit</a>{% endif %}
+    </div>
+    <div class="twrap"><table><thead><tr><th>Unit</th><th>Staff</th><th>Tasks</th><th>Shifts</th><th>Status</th>{% if can_write %}<th>Actions</th>{% endif %}</tr></thead><tbody>
+      {% for u in units %}<tr><td><b>{{ u.name }}</b>{% if u.description %}<div class="meta">{{ u.description|truncatechars:80 }}</div>{% endif %}</td><td>{{ u.staff_count }}</td><td>{{ u.task_count }}</td><td>{{ u.shift_count }}</td><td>{% if u.active %}<span class="badge b-ok">Active</span>{% else %}<span class="badge b-done">Inactive</span>{% endif %}</td>
+      {% if can_write %}<td class="actions"><a class="btn ghost sm" href="{% url 'unit_edit' u.pk %}">Edit</a>
+        {% if u.active %}<form method="post" action="{% url 'unit_archive' u.pk %}" class="inline-form" onsubmit="return confirm('Deactivate this unit? Units referenced by records cannot be deactivated.')">{% csrf_token %}<button class="btn ghost sm" type="submit">Deactivate</button></form>{% else %}<form method="post" action="{% url 'unit_restore' u.pk %}" class="inline-form">{% csrf_token %}<button class="btn ghost sm" type="submit">Reactivate</button></form>{% endif %}
+        <form method="post" action="{% url 'unit_delete' u.pk %}" class="inline-form" onsubmit="return confirm('Delete this unit? Deletion is only allowed when no records reference it.')">{% csrf_token %}<button class="btn danger sm" type="submit">Delete</button></form></td>{% endif %}</tr>
+      {% empty %}<tr><td colspan="6"><div class="empty"><h3>No units</h3><p>Create the first department unit.</p></div></td></tr>{% endfor %}
+    </tbody></table></div>
+  </div>
+  <div class="card">
+    <div class="page-head">
+      <div><h2>Classifications</h2><p class="meta">Configurable record, deliverable and training classifications.</p></div>
+      {% if can_write %}<a class="btn" href="{% url 'category_add' %}"><i data-lucide="plus"></i> Add classification</a>{% endif %}
+    </div>
+    <div class="twrap"><table><thead><tr><th>Name</th><th>Type</th><th>Usage</th><th>Status</th>{% if can_write %}<th>Actions</th>{% endif %}</tr></thead><tbody>
+      {% for c in categories %}<tr><td><b>{{ c.name }}</b>{% if c.description %}<div class="meta">{{ c.description|truncatechars:70 }}</div>{% endif %}</td><td>{{ c.get_kind_display }}</td><td>{{ c.task_count }} task{{ c.task_count|pluralize }} · {{ c.training_count }} training</td><td>{% if c.active %}<span class="badge b-ok">Active</span>{% else %}<span class="badge b-done">Inactive</span>{% endif %}</td>
+      {% if can_write %}<td class="actions"><a class="btn ghost sm" href="{% url 'category_edit' c.pk %}">Edit</a>
+        {% if c.active %}<form method="post" action="{% url 'category_archive' c.pk %}" class="inline-form" onsubmit="return confirm('Deactivate this classification?')">{% csrf_token %}<button class="btn ghost sm" type="submit">Deactivate</button></form>{% else %}<form method="post" action="{% url 'category_restore' c.pk %}" class="inline-form">{% csrf_token %}<button class="btn ghost sm" type="submit">Reactivate</button></form>{% endif %}
+        <form method="post" action="{% url 'category_delete' c.pk %}" class="inline-form" onsubmit="return confirm('Delete this classification? Deletion is only allowed when it is not referenced.')">{% csrf_token %}<button class="btn danger sm" type="submit">Delete</button></form></td>{% endif %}</tr>
+      {% empty %}<tr><td colspan="5"><div class="empty"><h3>No classifications</h3><p>Create one for records or training.</p></div></td></tr>{% endfor %}
+    </tbody></table></div>
+  </div>
+</div>
+<div class="card">
+  <h3>Deliverable type usage</h3>
+  <div class="quick-stats four">{% for t in type_counts %}<div><b>{{ t.count }}</b><span>{{ t.type }}</span></div>{% empty %}<div><b>0</b><span>No deliverables</span></div>{% endfor %}</div>
+  <p class="meta">Units and classifications referenced by active records cannot be deleted; deactivate them instead.</p>
+</div>
 {% endblock %}

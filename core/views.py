@@ -1225,7 +1225,12 @@ def staff_directory(request):
                        prc_expiry__gte=today, prc_expiry__lte=today + timedelta(days=90))
     qs = qs.order_by('unit__name', 'user__last_name', 'user__first_name')
     page = _page(request, qs, 20)
-    rows = [(s, can_view_sensitive_staff(request.user, s)) for s in page.object_list]
+    rows = [{
+        'staff': s,
+        'sensitive': can_view_sensitive_staff(request.user, s),
+        'can_edit': can_edit_staff(request.user, s),
+        'can_toggle': can_toggle_staff(request.user, s),
+    } for s in page.object_list]
     return render(request, 'core/staff.html', {
         'staff': rows,
         'page_obj': page,
@@ -1233,6 +1238,7 @@ def staff_directory(request):
         'can_add': can_create_staff(request.user),
         'units': permitted_units(request.user).order_by('name'),
         'q': q, 'unit_filter': unit_filter, 'status_filter': status_filter, 'expiry_filter': expiry_filter,
+        'today': timezone.localdate(),
         'page_title': '201 Files',
         'breadcrumb': 'Home / 201 Files',
     })
@@ -1579,8 +1585,15 @@ def training(request):
     qs = qs.order_by('-date')
     page = _page(request, qs, 25)
     summary = qs.aggregate(hours=Sum('hours'))
+    rows = [{
+        'training': t,
+        'can_edit': can_edit_training(request.user, t),
+        'can_validate': can_validate_training(request.user, t),
+        'can_archive': can_archive_training(request.user, t),
+        'can_delete': can_delete_training(request.user, t),
+    } for t in page.object_list]
     return render(request, 'core/training.html', {
-        'training': page,
+        'training': rows,
         'page_obj': page,
         'total_hours': summary['hours'] or 0,
         'validated_count': qs.filter(validation_status='validated').count(),
@@ -1878,10 +1891,12 @@ def shifts(request):
         'f_unit': f_unit, 'f_shift': f_shift,
         'start': start, 'end': end,
         'month_value': f'{year:04d}-{month:02d}' if month_value else '',
+        'current_month': f'{timezone.localdate().year:04d}-{timezone.localdate().month:02d}',
         'month_label': date(year, month, 1).strftime('%B %Y'),
         'prev_month': (date(year, month, 1) - timedelta(days=1)).strftime('%Y-%m'),
         'next_month': (date(year, month, 28) + timedelta(days=4)).strftime('%Y-%m'),
         'calendar_rows': calendar_rows,
+        'today': timezone.localdate(),
         'user_role': p.role,
         'page_title': 'Shift Counts',
         'breadcrumb': 'Home / Shifts',

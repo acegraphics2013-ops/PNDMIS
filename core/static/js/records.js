@@ -2,6 +2,7 @@ var state = {
   page: 1, search: '', category: '', classification: '', status: '', priority: '',
   sort: '-created_at', selected: {}, pending: null, statusOnly: false
 };
+var CAN_BULK = document.body.getAttribute('data-can-bulk') === '1';
 
 function $(id) { return document.getElementById(id); }
 function qs(obj) {
@@ -47,7 +48,7 @@ async function load() {
         }
         if (r.can_delete) actions += ' <button class="btn danger sm" type="button" onclick="askDelete(' + r.id + ',\'delete\')" aria-label="Delete record ' + r.id + '">Delete</button>';
         return '<tr>' +
-          '<td class="check-col"><input type="checkbox" class="row-check" value="' + r.id + '" aria-label="Select record ' + r.id + '"></td>' +
+          (CAN_BULK ? '<td class="check-col"><input type="checkbox" class="row-check" value="' + r.id + '" aria-label="Select record ' + r.id + '"></td>' : '') +
           '<td><b>' + escapeHtml(r.name) + '</b>' + (r.overdue ? ' <span class="badge b-overdue">Overdue</span>' : '') + '</td>' +
           '<td>' + r.id + '</td>' +
           '<td>' + escapeHtml(r.unit) + '</td>' +

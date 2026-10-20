@@ -12,7 +12,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   {% block head %}{% endblock %}
 </head>
-<body>
+<body data-can-bulk="{% if request.resolver_match.url_name == 'records' and can_write %}1{% else %}0{% endif %}">
 <a class="skip" href="#main-content">Skip to content</a>
 <div class="app">
   <aside class="sidebar" id="sidebar" aria-label="Primary navigation">

@@ -1,0 +1,42 @@
+{% extends 'core/base.html' %}{% load core_extras %}
+{% block content %}
+<div class="page-head">
+  <div><h2>{{ t.title }}</h2><p class="meta">{{ t.staff }} · {{ t.staff.unit }} · {{ t.date }}</p></div>
+  <div class="head-actions">
+    <a class="btn ghost sm" href="{% url 'training' %}"><i data-lucide="arrow-left"></i> Training</a>
+    {% if can_edit %}<a class="btn sm" href="{% url 'training_edit' t.pk %}"><i data-lucide="pencil"></i> Edit</a>{% endif %}
+    {% if can_validate %}<a class="btn ghost sm" href="{% url 'training_validate' t.pk %}"><i data-lucide="badge-check"></i> Validate</a>{% endif %}
+    {% if t.archived %}{% if can_archive %}<form method="post" action="{% url 'training_restore' t.pk %}" class="inline-form">{% csrf_token %}<button class="btn ghost sm" type="submit">Restore</button></form>{% endif %}{% elif can_archive %}<form method="post" action="{% url 'training_archive' t.pk %}" class="inline-form" onsubmit="return confirm('Archive this training record?')">{% csrf_token %}<button class="btn ghost sm" type="submit">Archive</button></form>{% endif %}
+    {% if can_delete %}<form method="post" action="{% url 'training_delete' t.pk %}" class="inline-form" onsubmit="return confirm('Permanently delete this training record? This is audited.')">{% csrf_token %}<button class="btn danger sm" type="submit">Delete</button></form>{% endif %}
+  </div>
+</div>
+<div class="grid-2">
+  <div class="card">
+    <h3>Training record</h3>
+    <dl class="detail-list">
+      <div><dt>Staff</dt><dd><a href="{% url 'staff_detail' t.staff_id %}">{{ t.staff }}</a></dd></div>
+      <div><dt>Unit</dt><dd>{{ t.staff.unit }}</dd></div>
+      <div><dt>Date</dt><dd>{{ t.date }}</dd></div>
+      <div><dt>Hours</dt><dd>{{ t.hours }}</dd></div>
+      <div><dt>Provider</dt><dd>{{ t.provider|default:"—" }}</dd></div>
+      <div><dt>Category</dt><dd>{{ t.category.name|default:"—" }}</dd></div>
+      <div><dt>Attendance</dt><dd><span class="badge {{ t.status|badge_class }}">{{ t.get_status_display }}</span></dd></div>
+      <div><dt>Certificate ref.</dt><dd>{{ t.certificate_reference|default:"—" }}</dd></div>
+    </dl>
+  </div>
+  <div class="card">
+    <h3>Validation</h3>
+    <dl class="detail-list">
+      <div><dt>Status</dt><dd><span class="badge {{ t.validation_status|badge_class }}">{{ t.get_validation_status_display }}</span>{% if t.archived %} <span class="badge b-done">Archived</span>{% endif %}</dd></div>
+      <div><dt>Validated by</dt><dd>{{ t.validated_by.username|default:"—" }}</dd></div>
+      <div><dt>Validated at</dt><dd>{{ t.validated_at|date:"Y-m-d H:i"|default:"—" }}</dd></div>
+      <div><dt>Remarks</dt><dd>{{ t.validation_remarks|default:"—"|linebreaksbr }}</dd></div>
+      <div><dt>Created</dt><dd>{{ t.created_at|date:"Y-m-d H:i" }}</dd></div>
+    </dl>
+  </div>
+</div>
+<div class="card">
+  <h3>History</h3>
+  {% if history %}<ol class="timeline">{% for a in history %}<li><span class="timeline-date">{{ a.occurred_at|date:"Y-m-d H:i" }}</span><div><b>{{ a.event|cut:"_"|capfirst }}</b> by {{ a.actor.username }}{% if a.detail.remarks %}<div class="note">{{ a.detail.remarks }}</div>{% endif %}</div></li>{% endfor %}</ol>{% else %}<p class="meta">No history recorded.</p>{% endif %}
+</div>
+{% endblock %}

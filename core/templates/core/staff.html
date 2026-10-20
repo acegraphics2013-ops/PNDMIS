@@ -1,1 +1,44 @@
-{% extends 'core/base.html' %}{% block content %}<div class="card"><h3>Staff 201 Files — Master directory</h3><p class="meta">Role: {{ user_role }}. Sensitive fields shown only to supervisor and owner.</p><div class="twrap"><table><tr><th>Name</th><th>Unit</th><th>Position</th><th>Employment</th>{% if user_role == 'supervisor' %}<th>Contact</th><th>PRC No.</th><th>PRC Expiry</th>{% endif %}<th>PNA</th><th>ANSAP</th><th>Detail</th></tr>{% for s in staff %}<tr><td>{{ s.user.get_full_name|default:s.user.username }}</td><td>{{ s.unit }}</td><td>{{ s.position }}</td><td>{% if s.active %}<span class="badge b-ok">Active</span>{% else %}<span class="badge b-done">Inactive</span>{% endif %}</td>{% if user_role == 'supervisor' %}<td>{{ s.contact_number }}</td><td>{{ s.prc_number }}</td><td>{{ s.prc_expiry }}</td>{% endif %}<td>{{ s.pna_membership }}</td><td>{{ s.ansap_membership }}</td><td><a class="btn ghost sm" href="{% url 'staff_detail' s.pk %}">Open</a></td></tr>{% empty %}<tr><td colspan="9"><div class="empty"><h3>No records</h3><p>No staff in scope.</p></div></td></tr>{% endfor %}</table></div></div>{% endblock %}
+{% extends 'core/base.html' %}{% load core_extras %}
+{% block content %}
+<div class="card">
+  <div class="page-head">
+    <div>
+      <h2>Staff 201 Files</h2>
+      <p class="meta">Privacy-aware directory. Contact, birthday, address and PRC details are visible only to supervisors and the record owner.</p>
+    </div>
+    {% if can_add %}<a class="btn" href="{% url 'staff_add' %}"><i data-lucide="user-plus"></i> Add staff</a>{% endif %}
+  </div>
+  <form method="get" class="filters">
+    <span class="sbox"><i data-lucide="search"></i><input name="q" value="{{ q }}" placeholder="Search name, employee no., position…" aria-label="Search staff"></span>
+    <select name="unit" aria-label="Filter by unit"><option value="">All units</option>{% for u in units %}<option value="{{ u.pk }}" {% if unit_filter == u.pk|stringformat:'s' %}selected{% endif %}>{{ u.name }}</option>{% endfor %}</select>
+    <select name="status" aria-label="Filter by status"><option value="">All statuses</option><option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option><option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option></select>
+    <select name="expiring" aria-label="Filter by PRC expiry"><option value="">Any PRC expiry</option><option value="soon" {% if expiry_filter == 'soon' %}selected{% endif %}>PRC expiring ≤ 90 days</option></select>
+    <button class="btn ghost sm" type="submit"><i data-lucide="filter"></i> Filter</button>
+    <a class="btn ghost sm" href="{% url 'staff' %}">Reset</a>
+  </form>
+  <div class="twrap">
+    <table>
+      <thead><tr><th>Staff</th><th>Unit</th><th>Position</th><th>Employment</th><th>Status</th>{% if user_role == 'supervisor' %}<th>Employee no.</th><th>Contact</th>{% endif %}<th>PRC expiry</th><th>Actions</th></tr></thead>
+      <tbody>
+      {% for row in staff %}{% with s=row.staff %}
+        <tr>
+          <td><a href="{% url 'staff_detail' s.pk %}"><b>{{ s.user.get_full_name|default:s.user.username }}</b></a><div class="meta">{{ s.user.username }}{% if s.user.email %} · {{ s.user.email }}{% endif %}</div></td>
+          <td>{{ s.unit }}</td>
+          <td>{{ s.position|default:"—" }}</td>
+          <td>{{ s.get_employment_status_display }}</td>
+          <td>{% if s.active %}<span class="badge b-ok">Active</span>{% else %}<span class="badge b-done">Inactive</span>{% endif %}</td>
+          {% if user_role == 'supervisor' %}<td>{{ s.employee_number|default:"—" }}</td><td>{% if row.sensitive %}{{ s.contact_number|default:"—" }}{% else %}<span class="meta">Restricted</span>{% endif %}</td>{% endif %}
+          <td>{% if row.sensitive %}{{ s.prc_expiry|default:"—" }}{% if s.prc_expiry and s.prc_expiry < today %}<span class="badge b-overdue">Expired</span>{% endif %}{% else %}<span class="meta">Restricted</span>{% endif %}</td>
+          <td class="actions">
+            <a class="btn ghost sm" href="{% url 'staff_detail' s.pk %}">View</a>
+            {% if row.can_edit %}<a class="btn ghost sm" href="{% url 'staff_edit' s.pk %}">Edit</a>{% endif %}
+            {% if row.can_toggle %}<form method="post" action="{% url 'staff_toggle' s.pk %}" class="inline-form" onsubmit="return confirm('Change the active status of this staff record?')">{% csrf_token %}<button class="btn ghost sm" type="submit">{% if s.active %}Deactivate{% else %}Activate{% endif %}</button></form>{% endif %}
+          </td>
+        </tr>
+      {% endwith %}{% empty %}<tr><td colspan="9"><div class="empty"><h3>No staff records</h3><p>No 201 files match your filters or scope.</p></div></td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include 'core/partials/pagination.html' %}
+</div>
+{% endblock %}

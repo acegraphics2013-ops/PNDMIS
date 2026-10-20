@@ -1,4 +1,50 @@
-{% extends 'core/base.html' %}{% load static %}{% block content %}
-<div class="charts charts-sm"><div class="card chart-sm"><h3>Records overview</h3><div class="doughnut-sm"><canvas id="ch-status" width="180" height="160"></canvas></div></div><div class="card"><h3>Staff per unit</h3><div class="bar-sm"><canvas id="ch-unit" height="160"></canvas></div></div></div>
-<div class="card"><h3>How to read</h3><p>Charts are loaded live from <code>/api/analytics/</code> — no fake statistics. If a unit has no staff, it will not appear until records exist.</p><p><a class="btn ghost" href="{% url 'records' %}">Open Records</a> <a class="btn ghost" href="{% url 'dashboard' %}">Back to Dashboard</a></p></div>
-{% endblock %}{% block scripts %}<script src="{% static 'js/dashboard.js' %}"></script>{% endblock %}
+{% extends 'core/base.html' %}{% load static %}
+{% block content %}
+<div class="card no-print">
+  <div class="page-head">
+    <div><h2>Reports &amp; Analytics</h2><p class="meta">Permission-aware reports. Exports use the same scope and privacy rules as the screen.</p></div>
+    <div class="head-actions">
+      <a class="btn ghost" href="{% url 'report_export' %}?{{ query_string }}{% if query_string %}&{% endif %}format=csv"><i data-lucide="file-down"></i> CSV</a>
+      <a class="btn ghost" href="{% url 'report_export' %}?{{ query_string }}{% if query_string %}&{% endif %}format=xlsx"><i data-lucide="table-2"></i> Excel</a>
+      <button class="btn ghost" type="button" onclick="window.print()"><i data-lucide="printer"></i> Print</button>
+    </div>
+  </div>
+  <form method="get" class="filters report-filters">
+    <label class="inline-label">Report {{ form.kind }}</label>
+    <label class="inline-label">From {{ form.start }}</label>
+    <label class="inline-label">To {{ form.end }}</label>
+    <label class="inline-label">Unit {{ form.unit }}</label>
+    <label class="inline-label">Staff {{ form.staff }}</label>
+    <label class="inline-label">Status {{ form.status }}</label>
+    <label class="inline-label">Type {{ form.type }}</label>
+    <label class="inline-label">Search {{ form.q }}</label>
+    <label class="inline-label">License horizon {{ form.horizon }}</label>
+    <button class="btn sm" type="submit"><i data-lucide="play"></i> Generate</button>
+    <a class="btn ghost sm" href="{% url 'reports' %}">Reset</a>
+  </form>
+  {% if form.errors %}<div class="nonfield" role="alert">{% for field, errors in form.errors.items %}<div>{{ field|capfirst }}: {{ errors|join:"; " }}</div>{% endfor %}</div>{% endif %}
+</div>
+
+{% if report %}
+<div class="print-head"><h1>PNDMIS — {{ report.title }}</h1><p>Generated {% now "Y-m-d H:i" %} · Asia/Manila</p></div>
+<div class="stats-grid summary-grid">
+  {% for label, value in report.summary %}<div class="card stat compact"><div><div class="num">{{ value }}</div><div class="lbl">{{ label }}</div></div></div>{% endfor %}
+</div>
+<div class="card">
+  <div class="card-head"><h3>{{ report.title }}</h3><span class="meta">{{ report.rows|length }} row{{ report.rows|length|pluralize }}</span></div>
+  {% if report.rows %}
+  <div class="twrap"><table><thead><tr>{% for column in report.columns %}<th>{{ column }}</th>{% endfor %}</tr></thead><tbody>
+    {% for row in report.rows %}<tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>{% endfor %}
+  </tbody></table></div>
+  {% else %}<div class="empty"><h3>No data</h3><p>{{ report.empty }}</p></div>{% endif %}
+</div>
+{% else %}
+<div class="card"><div class="empty"><h3>Select report filters</h3><p>Choose a report and filters, then generate.</p></div></div>
+{% endif %}
+
+<div class="charts charts-sm no-print">
+  <div class="card chart-sm"><h3>Deliverable status</h3><div class="doughnut-sm"><canvas id="ch-status" width="180" height="160"></canvas></div></div>
+  <div class="card"><h3>Active staff per unit</h3><div class="bar-sm"><canvas id="ch-unit" height="160"></canvas></div></div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/dashboard.js' %}"></script>{% endblock %}

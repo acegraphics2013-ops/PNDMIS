@@ -1,0 +1,60 @@
+{% extends 'core/base.html' %}{% load core_extras %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h2>{{ d.type }} — {{ d.period }}</h2>
+    <p class="meta">{{ d.staff }} · {{ d.staff.unit }} · Due {{ d.due_date }}{% if d.is_overdue %} <span class="badge b-overdue">Overdue</span>{% endif %}</p>
+  </div>
+  <div class="head-actions">
+    <a class="btn ghost sm" href="{% url 'deliverables' %}"><i data-lucide="arrow-left"></i> Deliverables</a>
+    {% if can_submit %}<a class="btn sm" href="{% url 'submit' d.pk %}"><i data-lucide="upload"></i> Submit</a>{% endif %}
+    {% if can_review %}<a class="btn sm" href="{% url 'review' d.pk %}"><i data-lucide="clipboard-check"></i> Review</a>{% endif %}
+    {% if can_edit %}<a class="btn ghost sm" href="{% url 'deliverable_edit' d.pk %}"><i data-lucide="pencil"></i> Edit</a>{% endif %}
+    {% if d.archived %}
+      {% if can_archive %}<form method="post" action="{% url 'deliverable_restore' d.pk %}" class="inline-form">{% csrf_token %}<button class="btn ghost sm" type="submit">Restore</button></form>{% endif %}
+    {% elif can_archive %}
+      <form method="post" action="{% url 'deliverable_archive' d.pk %}" class="inline-form" onsubmit="return confirm('Archive this deliverable?')">{% csrf_token %}<button class="btn ghost sm" type="submit">Archive</button></form>
+    {% endif %}
+    {% if can_delete %}<form method="post" action="{% url 'deliverable_delete' d.pk %}" class="inline-form" onsubmit="return confirm('Permanently delete this deliverable? This cannot be undone and is audited.')">{% csrf_token %}<button class="btn danger sm" type="submit">Delete</button></form>{% endif %}
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3>Requirement</h3>
+    <dl class="detail-list">
+      <div><dt>Status</dt><dd><span class="badge {{ d.status|badge_class }}">{{ d.get_status_display }}</span>{% if d.archived %} <span class="badge b-done">Archived</span>{% endif %}</dd></div>
+      <div><dt>Staff</dt><dd><a href="{% url 'staff_detail' d.staff_id %}">{{ d.staff }}</a></dd></div>
+      <div><dt>Unit</dt><dd>{{ d.staff.unit }}</dd></div>
+      <div><dt>Type / period</dt><dd>{{ d.type }} · {{ d.period }}</dd></div>
+      <div><dt>Due date</dt><dd>{{ d.due_date }}</dd></div>
+      <div><dt>Created by</dt><dd>{{ d.created_by.username|default:"—" }} · {{ d.created_at|date:"Y-m-d H:i" }}</dd></div>
+      <div><dt>Submissions</dt><dd>{{ d.submission_count }}</dd></div>
+      <div><dt>Secure document ref.</dt><dd>{{ d.document_reference|default:"—" }}</dd></div>
+    </dl>
+    {% if d.remarks %}<h4>Latest remarks</h4><div class="note">{{ d.remarks|linebreaksbr }}</div>{% endif %}
+  </div>
+  <div class="card">
+    <h3>Approval trail</h3>
+    <dl class="detail-list">
+      <div><dt>Submitted</dt><dd>{{ d.submitted_at|date:"Y-m-d H:i"|default:"Not submitted" }}</dd></div>
+      <div><dt>Verified by</dt><dd>{% if d.verified_by %}{{ d.verified_by.username }} · {{ d.verified_at|date:"Y-m-d H:i" }}{% else %}—{% endif %}</dd></div>
+      <div><dt>Approved by</dt><dd>{% if d.approved_by %}{{ d.approved_by.username }} · {{ d.approved_at|date:"Y-m-d H:i" }}{% else %}—{% endif %}</dd></div>
+      <div><dt>Returned</dt><dd>{{ d.returned_at|date:"Y-m-d H:i"|default:"—" }}</dd></div>
+      <div><dt>Last reviewer</dt><dd>{{ d.reviewer.username|default:"—" }} · {{ d.reviewed_at|date:"Y-m-d H:i"|default:"—" }}</dd></div>
+      <div><dt>Last updated</dt><dd>{{ d.updated_at|date:"Y-m-d H:i" }}</dd></div>
+    </dl>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Workflow and audit history</h3>
+  {% if history %}
+  <ol class="timeline">
+    {% for a in history %}
+    <li><span class="timeline-date">{{ a.occurred_at|date:"Y-m-d H:i" }}</span><div><b>{{ a.event|cut:"_"|capfirst }}</b> by {{ a.actor.username }}{% if a.changes.status %}<div class="meta">Status: {{ a.changes.status.from|default:"—" }} → {{ a.changes.status.to }}</div>{% endif %}{% if a.detail.remarks %}<div class="note">{{ a.detail.remarks }}</div>{% endif %}</div></li>
+    {% endfor %}
+  </ol>
+  {% else %}<div class="empty"><h3>No history yet</h3><p>Workflow actions will be recorded here.</p></div>{% endif %}
+</div>
+{% endblock %}

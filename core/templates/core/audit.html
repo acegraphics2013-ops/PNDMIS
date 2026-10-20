@@ -1,0 +1,34 @@
+{% extends 'core/base.html' %}{% load core_extras %}
+{% block content %}
+<div class="card">
+  <div class="page-head"><div><h2>Audit Trail</h2><p class="meta">Restricted, read-only history of workflow, access, modification and export events. Sensitive values such as passwords and tokens are never logged.</p></div></div>
+  <form method="get" class="filters">
+    <span class="sbox"><i data-lucide="search"></i><input name="q" value="{{ q }}" placeholder="Search actor, event, object…" aria-label="Search audit trail"></span>
+    <select name="event" aria-label="Filter by event"><option value="">All events</option>{% for e in events_choices %}<option value="{{ e }}" {% if event == e %}selected{% endif %}>{{ e }}</option>{% endfor %}</select>
+    <select name="object_type" aria-label="Filter by object type"><option value="">All object types</option>{% for o in object_types %}<option value="{{ o }}" {% if object_type == o %}selected{% endif %}>{{ o }}</option>{% endfor %}</select>
+    <select name="actor" aria-label="Filter by actor"><option value="">All actors</option>{% for a in actors %}<option value="{{ a.pk }}" {% if actor_id == a.pk|stringformat:'s' %}selected{% endif %}>{{ a.username }}</option>{% endfor %}</select>
+    <label class="inline-label">From <input type="date" name="start" value="{{ start|date:'Y-m-d' }}"></label>
+    <label class="inline-label">To <input type="date" name="end" value="{{ end|date:'Y-m-d' }}"></label>
+    <button class="btn ghost sm" type="submit"><i data-lucide="filter"></i> Filter</button>
+    <a class="btn ghost sm" href="{% url 'audit' %}">Reset</a>
+  </form>
+  <div class="twrap">
+    <table>
+      <thead><tr><th>When</th><th>Actor</th><th>Event</th><th>Object</th><th>IP</th><th>Detail</th></tr></thead>
+      <tbody>
+      {% for a in events %}
+        <tr>
+          <td>{{ a.occurred_at|date:"Y-m-d H:i:s" }}</td>
+          <td>{{ a.actor.username }}</td>
+          <td><span class="badge b-info">{{ a.event }}</span></td>
+          <td>{{ a.object_type }} #{{ a.object_id }}{% if a.target_label %}<div class="meta">{{ a.target_label }}</div>{% endif %}</td>
+          <td>{{ a.ip_address|default:"—" }}</td>
+          <td>{% if a.previous or a.changes or a.detail %}<details><summary>View</summary>{% if a.changes %}<div class="meta">Changes</div><pre class="json">{{ a.changes|json_pretty }}</pre>{% endif %}{% if a.previous %}<div class="meta">Previous</div><pre class="json">{{ a.previous|json_pretty }}</pre>{% endif %}{% if a.detail %}<div class="meta">Detail</div><pre class="json">{{ a.detail|json_pretty }}</pre>{% endif %}</details>{% else %}<span class="meta">—</span>{% endif %}</td>
+        </tr>
+      {% empty %}<tr><td colspan="6"><div class="empty"><h3>No audit events</h3><p>No events match the selected filters.</p></div></td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include 'core/partials/pagination.html' %}
+</div>
+{% endblock %}

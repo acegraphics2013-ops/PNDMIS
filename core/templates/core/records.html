@@ -16,17 +16,17 @@
     <select id="f-prio" aria-label="Filter by priority"><option value="">All priorities</option><option value="critical">Critical</option><option value="high">High</option><option value="normal">Normal</option></select>
     <button class="btn ghost sm" type="button" onclick="resetFilters()"><i data-lucide="rotate-ccw"></i> Reset</button>
   </div>
-  <div class="bulk-bar" id="bulk-bar" hidden>
+  {% if can_write %}<div class="bulk-bar" id="bulk-bar" hidden>
     <span><b id="bulk-count">0</b> selected</span>
     <button class="btn ghost sm" type="button" onclick="bulkAction('archive')"><i data-lucide="archive"></i> Archive</button>
     <button class="btn ghost sm" type="button" onclick="bulkAction('restore')"><i data-lucide="archive-restore"></i> Restore</button>
-    <button class="btn danger sm" type="button" onclick="bulkAction('delete')"><i data-lucide="trash-2"></i> Delete</button>
+    {% if user_role == 'supervisor' %}<button class="btn danger sm" type="button" onclick="bulkAction('delete')"><i data-lucide="trash-2"></i> Delete</button>{% endif %}
     <button class="btn ghost sm" type="button" onclick="clearSelection()">Clear</button>
-  </div>
+  </div>{% endif %}
   <div class="twrap">
     <table class="records-table">
       <thead><tr>
-        <th class="check-col"><input type="checkbox" id="check-all" aria-label="Select all records"></th>
+        {% if can_write %}<th class="check-col"><input type="checkbox" id="check-all" aria-label="Select all records"></th>{% endif %}
         <th class="sortable" data-sort="name">Record</th>
         <th>ID</th>
         <th>Unit</th>

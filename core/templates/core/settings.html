@@ -1,4 +1,37 @@
-{% extends 'core/base.html' %}{% block content %}
-<div class="card"><h3>Settings</h3><div class="twrap"><table><tr><th>Key</th><th>Value</th></tr><tr><td>Signed in as</td><td>{{ user.username }} ({{ my_profile.get_role_display }} / {{ my_profile.unit|default:"no unit" }})</td></tr><tr><td>Timezone</td><td>Asia/Manila</td></tr><tr><td>Change password</td><td><a href="{% url 'password_change' %}">Open password change</a></td></tr><tr><td>Admin</td><td><a href="/admin/">Django admin</a></td></tr></table></div></div>
-<div class="card"><h3>Security notes</h3><ul class="meta"><li>Session cookies HttpOnly; Secure + HSTS when DEBUG=False.</li><li>State-changing API requires CSRF + login + role check.</li><li>Secrets from environment, never hardcoded.</li></ul></div>
+{% extends 'core/base.html' %}{% load core_extras %}
+{% block content %}
+<div class="grid-2">
+  <div class="card">
+    <h3>My profile</h3>
+    <form method="post" class="stack" data-loading-form>
+      {% csrf_token %}
+      {% include 'core/partials/form_fields.html' %}
+      <div class="form-actions"><button class="btn" type="submit"><i data-lucide="save"></i> Save profile</button></div>
+    </form>
+  </div>
+  <div class="card">
+    <h3>Account</h3>
+    <dl class="detail-list">
+      <div><dt>Username</dt><dd>{{ user.username }}</dd></div>
+      <div><dt>Role</dt><dd><span class="badge b-info">{{ my_profile.get_role_display }}</span></dd></div>
+      <div><dt>Unit</dt><dd>{{ my_profile.unit|default:"All units / unassigned" }}</dd></div>
+      <div><dt>Account status</dt><dd>{% if user.is_active %}<span class="badge b-ok">Active</span>{% else %}<span class="badge b-overdue">Inactive</span>{% endif %}</dd></div>
+      <div><dt>Last login</dt><dd>{{ user.last_login|date:"Y-m-d H:i"|default:"Never" }}</dd></div>
+      <div><dt>201 file</dt><dd>{% if my_staff %}<a href="{% url 'staff_detail' my_staff.pk %}">View my staff record</a>{% else %}<span class="meta">Not linked</span>{% endif %}</dd></div>
+    </dl>
+    <div class="form-actions">
+      <a class="btn ghost" href="{% url 'password_change' %}"><i data-lucide="key-round"></i> Change password</a>
+      <a class="btn ghost" href="{% url 'notifications' %}"><i data-lucide="bell"></i> Notifications</a>
+    </div>
+    <div class="notice">Role and unit assignments are managed by the supervisor. Profile changes are audited.</div>
+  </div>
+</div>
+<div class="card">
+  <h3>My recent activity</h3>
+  {% if recent_activity %}
+  <ol class="timeline">
+    {% for a in recent_activity %}<li><span class="timeline-date">{{ a.occurred_at|date:"Y-m-d H:i" }}</span><div><b>{{ a.event }}</b> — {{ a.object_type }}{% if a.target_label %} · {{ a.target_label }}{% endif %}</div></li>{% endfor %}
+  </ol>
+  {% else %}<p class="meta">No recorded activity yet.</p>{% endif %}
+</div>
 {% endblock %}

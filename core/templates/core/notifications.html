@@ -1,0 +1,28 @@
+{% extends 'core/base.html' %}{% load core_extras %}
+{% block content %}
+<div class="card">
+  <div class="page-head">
+    <div><h2>Notifications</h2><p class="meta">{{ unread }} unread of {{ page_obj.paginator.count }} notification{{ page_obj.paginator.count|pluralize }}.</p></div>
+    {% if unread %}<form method="post" action="{% url 'notifications_read_all' %}">{% csrf_token %}<button class="btn ghost" type="submit"><i data-lucide="check-check"></i> Mark all read</button></form>{% endif %}
+  </div>
+  <form method="get" class="filters">
+    <select name="status" aria-label="Filter notifications"><option value="">All notifications</option><option value="unread" {% if f_status == 'unread' %}selected{% endif %}>Unread only</option><option value="read" {% if f_status == 'read' %}selected{% endif %}>Read only</option></select>
+    <button class="btn ghost sm" type="submit"><i data-lucide="filter"></i> Filter</button>
+    <a class="btn ghost sm" href="{% url 'notifications' %}">Reset</a>
+  </form>
+  <div class="notif-list">
+    {% for n in notifications %}
+    <div class="notif-item {% if not n.is_read %}unread{% endif %}">
+      <div class="notif-dot"></div>
+      <div class="notif-body">
+        <div class="notif-title">{{ n.title }}{% if n.category %} <span class="badge b-info">{{ n.category }}</span>{% endif %}</div>
+        <p>{{ n.message }}</p>
+        <div class="notif-meta">{{ n.created_at|date:"Y-m-d H:i" }}{% if n.url %} · <a href="{{ n.url }}">Open record</a>{% endif %}</div>
+      </div>
+      {% if not n.is_read %}<form method="post" action="{% url 'notification_read' n.pk %}" class="inline-form">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn ghost sm" type="submit">Mark read</button></form>{% endif %}
+    </div>
+    {% empty %}<div class="empty"><h3>No notifications</h3><p>Workflow updates and reminders will appear here.</p></div>{% endfor %}
+  </div>
+  {% include 'core/partials/pagination.html' %}
+</div>
+{% endblock %}

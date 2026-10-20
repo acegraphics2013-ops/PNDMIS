@@ -1,1 +1,54 @@
-{% extends 'core/base.html' %}{% block content %}<div class="card"><h3>Staff Deliverables — DTR / DAR / IPCR</h3><div class="filters"><form method="get" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">Type: <select name="type" aria-label="Filter by type"><option value="">All</option><option value="DTR" {% if f_type == 'DTR' %}selected{% endif %}>DTR</option><option value="DAR" {% if f_type == 'DAR' %}selected{% endif %}>DAR</option><option value="IPCR" {% if f_type == 'IPCR' %}selected{% endif %}>IPCR</option><option value="OTHER" {% if f_type == 'OTHER' %}selected{% endif %}>Other</option></select> Status: <select name="status" aria-label="Filter by status"><option value="">All</option><option value="pending" {% if f_status == 'pending' %}selected{% endif %}>Pending</option><option value="submitted" {% if f_status == 'submitted' %}selected{% endif %}>Submitted</option><option value="review" {% if f_status == 'review' %}selected{% endif %}>Under review</option><option value="returned" {% if f_status == 'returned' %}selected{% endif %}>Returned</option><option value="verified" {% if f_status == 'verified' %}selected{% endif %}>Verified</option><option value="approved" {% if f_status == 'approved' %}selected{% endif %}>Approved</option></select><label style="display:inline-flex;gap:4px;align-items:center"><input type="checkbox" name="overdue" value="1" {% if f_overdue == '1' %}checked{% endif %}> Overdue only</label> <button class="btn ghost sm">Filter</button> <a class="btn ghost sm" href="{% url 'deliverables' %}">Reset</a></form></div><div class="twrap"><table><tr><th>Staff</th><th>Unit</th><th>Type</th><th>Period</th><th>Due date</th><th>Status</th><th>Submitted</th><th>Action</th></tr>{% for d, is_overdue in rows %}<tr {% if is_overdue %}class="overdue"{% endif %}><td>{{ d.staff.user.username }}</td><td>{{ d.staff.unit }}</td><td>{{ d.type }}</td><td>{{ d.period }}</td><td>{{ d.due_date }} {% if is_overdue %}<span class="badge b-overdue">Overdue</span>{% endif %}</td><td><span class="badge b-info">{{ d.get_status_display }}</span></td><td>{{ d.submitted_at|default:"—" }}</td><td>{% if d.staff.user_id == user.id and d.status == 'pending' or d.staff.user_id == user.id and d.status == 'returned' %}<a class="btn ghost sm" href="{% url 'submit' d.pk %}">Submit</a>{% elif user_role != 'staff' %}<a class="btn ghost sm" href="{% url 'review' d.pk %}">Review</a>{% endif %}</td></tr>{% empty %}<tr><td colspan="8"><div class="empty"><h3>No requirements</h3><p>Try clearing filters.</p></div></td></tr>{% endfor %}</table></div></div>{% endblock %}
+{% extends 'core/base.html' %}{% load core_extras %}
+{% block content %}
+<div class="card">
+  <div class="page-head">
+    <div>
+      <h2>Staff Deliverables — DTR / DAR / IPCR</h2>
+      <p class="meta">Workflow: Pending → Submitted → Under review → Verified → Approved. Returns require remarks.</p>
+    </div>
+    {% if can_create %}<div class="head-actions"><a class="btn ghost" href="{% url 'deliverable_bulk' %}"><i data-lucide="layers"></i> Bulk / recurring</a><a class="btn" href="{% url 'deliverable_add' %}"><i data-lucide="plus"></i> New deliverable</a></div>{% endif %}
+  </div>
+  <form method="get" class="filters">
+    <select name="type" aria-label="Filter by type"><option value="">All types</option><option value="DTR" {% if f_type == 'DTR' %}selected{% endif %}>DTR</option><option value="DAR" {% if f_type == 'DAR' %}selected{% endif %}>DAR</option><option value="IPCR" {% if f_type == 'IPCR' %}selected{% endif %}>IPCR</option><option value="OTHER" {% if f_type == 'OTHER' %}selected{% endif %}>Other</option></select>
+    <select name="status" aria-label="Filter by status"><option value="">All statuses</option><option value="pending" {% if f_status == 'pending' %}selected{% endif %}>Pending</option><option value="submitted" {% if f_status == 'submitted' %}selected{% endif %}>Submitted</option><option value="review" {% if f_status == 'review' %}selected{% endif %}>Under review</option><option value="returned" {% if f_status == 'returned' %}selected{% endif %}>Returned</option><option value="verified" {% if f_status == 'verified' %}selected{% endif %}>Verified</option><option value="approved" {% if f_status == 'approved' %}selected{% endif %}>Approved</option></select>
+    <select name="unit" aria-label="Filter by unit"><option value="">All units</option>{% for u in units %}<option value="{{ u.pk }}" {% if f_unit == u.pk|stringformat:'s' %}selected{% endif %}>{{ u.name }}</option>{% endfor %}</select>
+    <select name="staff" aria-label="Filter by staff"><option value="">All staff</option>{% for s in staff_options %}<option value="{{ s.pk }}" {% if f_staff == s.pk|stringformat:'s' %}selected{% endif %}>{{ s }}</option>{% endfor %}</select>
+    <input name="period" value="{{ f_period }}" placeholder="Period" aria-label="Filter by period" style="max-width:130px">
+    <label class="check-label"><input type="checkbox" name="overdue" value="1" {% if f_overdue == '1' %}checked{% endif %}> Overdue only</label>
+    <label class="check-label"><input type="checkbox" name="archived" value="1" {% if show_archived %}checked{% endif %}> Archived</label>
+    <button class="btn ghost sm" type="submit"><i data-lucide="filter"></i> Filter</button>
+    <a class="btn ghost sm" href="{% url 'deliverables' %}">Reset</a>
+  </form>
+  <div class="twrap">
+    <table>
+      <thead><tr><th>Staff</th><th>Unit</th><th>Type</th><th>Period</th><th>Due date</th><th>Status</th><th>Submitted</th><th>Actions</th></tr></thead>
+      <tbody>
+      {% for d, is_overdue in rows %}
+        <tr class="{% if is_overdue %}overdue{% endif %}">
+          <td><a href="{% url 'staff_detail' d.staff_id %}">{{ d.staff }}</a></td>
+          <td>{{ d.staff.unit }}</td>
+          <td><a href="{% url 'deliverable_detail' d.pk %}">{{ d.type }}</a></td>
+          <td>{{ d.period }}</td>
+          <td>{{ d.due_date }}{% if is_overdue %} <span class="badge b-overdue">Overdue</span>{% endif %}</td>
+          <td><span class="badge {{ d.status|badge_class }}">{{ d.get_status_display }}</span></td>
+          <td>{{ d.submitted_at|date:"Y-m-d H:i"|default:"—" }}</td>
+          <td class="actions">
+            <a class="btn ghost sm" href="{% url 'deliverable_detail' d.pk %}">View</a>
+            {% if d.staff.user_id == user.id and d.status == 'pending' or d.staff.user_id == user.id and d.status == 'returned' %}<a class="btn sm" href="{% url 'submit' d.pk %}">Submit</a>{% endif %}
+            {% if user_role != 'staff' and d.status == 'submitted' or user_role != 'staff' and d.status == 'review' or user_role != 'staff' and d.status == 'verified' %}<a class="btn ghost sm" href="{% url 'review' d.pk %}">Review</a>{% endif %}
+            {% if user_role != 'staff' and not show_archived and d.status != 'approved' %}<a class="btn ghost sm" href="{% url 'deliverable_edit' d.pk %}">Edit</a>{% endif %}
+            {% if show_archived %}
+              {% if user_role != 'staff' %}<form method="post" action="{% url 'deliverable_restore' d.pk %}" class="inline-form">{% csrf_token %}<button class="btn ghost sm" type="submit">Restore</button></form>{% endif %}
+            {% elif user_role != 'staff' %}
+              <form method="post" action="{% url 'deliverable_archive' d.pk %}" class="inline-form" onsubmit="return confirm('Archive this deliverable?')">{% csrf_token %}<button class="btn ghost sm" type="submit">Archive</button></form>
+            {% endif %}
+            {% if user_role == 'supervisor' %}<form method="post" action="{% url 'deliverable_delete' d.pk %}" class="inline-form" onsubmit="return confirm('Permanently delete this deliverable? This cannot be undone and is audited.')">{% csrf_token %}<button class="btn danger sm" type="submit">Delete</button></form>{% endif %}
+          </td>
+        </tr>
+      {% empty %}<tr><td colspan="8"><div class="empty"><h3>No deliverables</h3><p>No requirements match the selected filters.</p>{% if can_create %}<p><a class="btn sm" href="{% url 'deliverable_add' %}">Create deliverable</a></p>{% endif %}</div></td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include 'core/partials/pagination.html' %}
+</div>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends 'core/base.html' %}{% load core_extras %}
+{% block content %}
+<div class="grid-2">
+  <div class="card">
+    <div class="page-head"><div><h2>Review {{ d.type }} — {{ d.period }}</h2><p class="meta">{{ d.staff }} · {{ d.staff.unit }}</p></div><a class="btn ghost sm" href="{{ cancel_url }}">Back</a></div>
+    <dl class="detail-list">
+      <div><dt>Current status</dt><dd><span class="badge {{ d.status|badge_class }}">{{ d.get_status_display }}</span></dd></div>
+      <div><dt>Due date</dt><dd>{{ d.due_date }}{% if d.is_overdue %} <span class="badge b-overdue">Overdue</span>{% endif %}</dd></div>
+      <div><dt>Submitted</dt><dd>{{ d.submitted_at|date:"Y-m-d H:i"|default:"—" }}</dd></div>
+      <div><dt>Secure document ref.</dt><dd>{{ d.document_reference|default:"—" }}</dd></div>
+      <div><dt>Remarks</dt><dd>{{ d.remarks|default:"—"|linebreaksbr }}</dd></div>
+    </dl>
+    <div class="notice">Verify or return with remarks. Final approval is restricted to the department supervisor after verification.</div>
+  </div>
+  <div class="card">
+    <h3>Record decision</h3>
+    <form method="post" class="stack" data-loading-form>
+      {% csrf_token %}
+      {% include 'core/partials/form_fields.html' %}
+      <div class="form-actions"><button class="btn" type="submit" data-submit-label="Record decision"><i data-lucide="check"></i> Record decision</button><a class="btn ghost" href="{{ cancel_url }}">Cancel</a></div>
+    </form>
+  </div>
+</div>
+<div class="card">
+  <h3>History</h3>
+  {% if history %}<ol class="timeline">{% for a in history %}<li><span class="timeline-date">{{ a.occurred_at|date:"Y-m-d H:i" }}</span><div><b>{{ a.event|cut:"_"|capfirst }}</b> by {{ a.actor.username }}{% if a.detail.remarks %}<div class="note">{{ a.detail.remarks }}</div>{% endif %}</div></li>{% endfor %}</ol>{% else %}<p class="meta">No history yet.</p>{% endif %}
+</div>
+{% endblock %}
