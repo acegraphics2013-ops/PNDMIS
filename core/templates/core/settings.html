@@ -1,0 +1,4 @@
+{% extends 'core/base.html' %}{% block content %}
+<div class="card"><h3>Settings</h3><div class="twrap"><table><tr><th>Key</th><th>Value</th></tr><tr><td>Signed in as</td><td>{{ user.username }} ({{ my_profile.get_role_display }} / {{ my_profile.unit|default:"no unit" }})</td></tr><tr><td>Timezone</td><td>Asia/Manila</td></tr><tr><td>Change password</td><td><a href="{% url 'password_change' %}">Open password change</a></td></tr><tr><td>Admin</td><td><a href="/admin/">Django admin</a></td></tr></table></div></div>
+<div class="card"><h3>Security notes</h3><ul class="meta"><li>Session cookies HttpOnly; Secure + HSTS when DEBUG=False.</li><li>State-changing API requires CSRF + login + role check.</li><li>Secrets from environment, never hardcoded.</li></ul></div>
+{% endblock %}

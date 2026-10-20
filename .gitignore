@@ -1,0 +1,28 @@
+# Secrets / credentials
+.env
+USERS.txt
+
+# Local databases
+*.sqlite3
+db.sqlite3-journal
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Django
+/media/
+/staticfiles/
+*.log
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

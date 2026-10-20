@@ -1,0 +1,4 @@
+{% extends 'core/base.html' %}{% load static %}{% block content %}
+<div class="charts charts-sm"><div class="card chart-sm"><h3>Records overview</h3><div class="doughnut-sm"><canvas id="ch-status" width="180" height="160"></canvas></div></div><div class="card"><h3>Staff per unit</h3><div class="bar-sm"><canvas id="ch-unit" height="160"></canvas></div></div></div>
+<div class="card"><h3>How to read</h3><p>Charts are loaded live from <code>/api/analytics/</code> — no fake statistics. If a unit has no staff, it will not appear until records exist.</p><p><a class="btn ghost" href="{% url 'records' %}">Open Records</a> <a class="btn ghost" href="{% url 'dashboard' %}">Back to Dashboard</a></p></div>
+{% endblock %}{% block scripts %}<script src="{% static 'js/dashboard.js' %}"></script>{% endblock %}

@@ -1,0 +1,7 @@
+.pager{display:flex;gap:8px;align-items:center;margin-top:10px}
+th.sortable{cursor:pointer;user-select:none}th.sortable:hover{color:var(--ink)}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid #CBD5E1;border-top-color:var(--blue);border-radius:50%;animation:s .8s linear infinite;vertical-align:middle}
+@keyframes s{to{transform:rotate(360deg)}}
+.sbox{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:0 8px}
+.sbox input{border:0;background:transparent;height:38px}
+.sbox svg{width:16px;height:16px;color:var(--muted)}

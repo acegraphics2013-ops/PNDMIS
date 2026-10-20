@@ -1,0 +1,4 @@
+{% extends 'core/base.html' %}{% block content %}
+<div class="card"><h3>Categories — Units</h3><div class="twrap"><table><tr><th>ID</th><th>Name</th><th>Staff</th><th>Tasks</th></tr>{% for u in units %}<tr><td>{{ u.id }}</td><td>{{ u.name }}</td><td>{{ u.staff_count }}</td><td>{{ u.task_count }}</td></tr>{% empty %}<tr><td colspan="4"><div class="empty"><h3>No categories</h3><p>Ask a supervisor to add units via Admin.</p></div></td></tr>{% endfor %}</table></div></div>
+<div class="card"><h3>Deliverable types</h3><div class="twrap"><table><tr><th>Type</th><th>Count</th></tr>{% for t in type_counts %}<tr><td>{{ t.type }}</td><td>{{ t.count }}</td></tr>{% empty %}<tr><td colspan="2"><div class="empty">No deliverables yet</div></td></tr>{% endfor %}</table></div></div>
+{% endblock %}
